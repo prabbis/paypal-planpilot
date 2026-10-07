@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+function load(file,modules){const exports={};const context={exports,require:name=>modules[name]??require(name),Response,Request,URL,AbortSignal,btoa,fetch:modules.fetch};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,context);return exports;}
+const requests=[];
+const provider=load('lib/paypal.ts',{'cloudflare:workers':{env:{PAYPAL_CLIENT_ID:'test-id',PAYPAL_CLIENT_SECRET:'test-secret'}},fetch:async(url,options)=>{requests.push({url,options});return Response.json({access_token:'test-token',id:'PROD-TEST123'});}});
+assert.equal(await provider.accessToken(),'test-token');assert.equal(requests[0].url,'https://api-m.sandbox.paypal.com/v1/oauth2/token');
+await provider.paypal('test-token','/v1/catalogs/products',{name:'Test'},'stable-request-id');assert.equal(requests[1].options.headers['PayPal-Request-Id'],'stable-request-id');
+const calls=[];let fail=false;
+const mock={accessToken:async()=> 'token',paypal:async(token,path,body,id)=>{calls.push({path,body,id});if(path.includes('products'))return{id:'PROD-TEST123'};if(fail&&calls.filter(c=>c.path.includes('billing/plans')).length===2)throw new Error('failed');return{id:'P-TEST1234567890'+calls.length,status:'ACTIVE'};},routeError:()=>Response.json({error:'Provider failure'},{status:502})};
+const route=load('app/api/paypal/route.ts',{'@/lib/paypal':mock});
+const payload={requestId:'550e8400-e29b-41d4-a716-446655440000',title:'Test app',description:'Test',annual:true,approved:true,plans:['Starter','Growth','Business'].map(name=>({name,price:25,seats:1,units:100,features:['Core access']}))};
+const req=(data,origin='https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site')=>new Request(origin+'/api/paypal',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(data)});
+assert.equal((await route.POST(req(payload,'https://other.example'))).status,403);
+assert.equal((await route.POST(req({...payload,approved:false}))).status,400);
+assert.equal((await route.POST(req({...payload,plans:payload.plans.map(p=>({...p,price:-1}))}))).status,400);
+let response=await route.POST(req(payload));let data=await response.json();assert.equal(response.status,200);assert.equal(data.plans.length,3);const planCall=calls.find(c=>c.path.includes('billing/plans'));assert.equal(planCall.body.billing_cycles[0].frequency.interval_unit,'YEAR');assert.equal(planCall.body.billing_cycles[0].pricing_scheme.fixed_price.value,'240.00');assert.equal(planCall.body.billing_cycles[0].pricing_scheme.fixed_price.currency_code,'CAD');
+const ids=calls.map(c=>c.id);calls.length=0;await route.POST(req(payload));assert.deepEqual(calls.map(c=>c.id),ids);
+calls.length=0;fail=true;response=await route.POST(req(payload));data=await response.json();assert.equal(response.status,502);assert.equal(data.plans.length,1);assert.equal(data.productId,'PROD-TEST123');
+console.log('Passed: sandbox host, request validation, annual billing, stable retry IDs and partial failure reporting.');

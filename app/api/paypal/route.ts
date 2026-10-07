@@ -21,5 +21,5 @@ export async function POST(request:Request){
  if(typeof plan.id!=="string"||!/^P-[A-Z0-9]+$/.test(plan.id))throw new Error();results.push({id:plan.id,name:p.name,amount,status:String(plan.status)});
  }
  return Response.json({environment:"sandbox",productId,plans:results},{headers:{"Cache-Control":"no-store"}});
- }catch(e){const response=routeError(e);const data=await response.json();return Response.json({...data,productId,plans:results},{status:response.status});}
+ }catch(e){const response=routeError(e);const data=await response.json() as {error:string};return Response.json({...data,productId,plans:results},{status:response.status});}
 }

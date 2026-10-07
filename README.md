@@ -124,3 +124,36 @@ The portable build runs Vinext directly without a host `timeout` command. The ma
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
 - [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+# PlanPilot — PayPal sandbox pricing workspace
+
+PlanPilot turns app descriptions into editable pricing tiers, estimates contribution margins, and creates PayPal sandbox products and recurring billing plans after explicit approval.
+
+## Current integration status
+
+- PayPal uses real server-side sandbox API calls. Live payments are deliberately unavailable.
+- The configured app belongs to one sandbox merchant. This is not multi-merchant OAuth onboarding.
+- AI responses remain rule-based and are labelled simulated. A real model integration still needs an OpenAI API key and implementation.
+- The site must remain private: its platform access policy protects the shared merchant credentials and operations. Public access requires additional authorization.
+
+## Run and configure
+
+Install with the package manager pinned in package.json, then run `pnpm dev` for local development or `pnpm build` for a production build. Configure `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` as server-side secret environment variables from a PayPal sandbox app. Never place secrets in browser code or source control. `.env.example` lists configuration names without values. Hosted secrets are configured through Sites.
+
+Run `node scripts/test-paypal.mjs` for request-validation, sandbox-host, annual-price, idempotency-key and partial-failure checks. Run `node node_modules/typescript/bin/tsc --noEmit` for TypeScript validation.
+
+## Test the full PayPal flow
+
+1. Describe an app or choose an example; edit the three tiers and review the cost assumptions.
+2. Verify the configured PayPal sandbox connection.
+3. Approve plan creation. The results show actual sandbox plan IDs.
+4. Choose Test subscription for a created plan and follow Continue to sandbox PayPal.
+5. Use a sandbox personal account from the PayPal Developer Dashboard to approve the subscription. Check subscription status afterward.
+
+PayPal products and plans persist in the sandbox, even when the pricing draft is edited or the page is refreshed. No existing plans are updated or deleted by draft edits. Unchanged retries reuse request IDs to reduce duplicate creation within PayPal's idempotency window. Partial successes are displayed; inspect the sandbox dashboard when an ambiguous timeout occurs. Drafts and checkout links remain in memory only.
+
+Prices use CAD. Annual plans charge 12 times the monthly price with a 20% discount. Usage caps and feature entitlements are app-level policies; PayPal does not enforce them. Cost and payment-fee assumptions are illustrative, not provider quotes. Margin estimates exclude taxes and other overhead.
+
+The submission still needs a public open-source repository with an agreed licence, real AI, and a video under three minutes. The hosted Site alone is not a completed hackathon submission.
+
+---
+

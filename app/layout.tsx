@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PlanPilot — App pricing demo",
-  description: "Describe an app, explore editable pricing tiers and simulate PayPal billing-plan creation. An interactive demo by Prabbis.",
+  title: "PlanPilot — AI pricing & PayPal sandbox",
+  description: "Generate editable app pricing with AI, review cost assumptions and create real PayPal sandbox billing plans. By Prabbis.",
   other: {
     "codex-preview": "development",
   },

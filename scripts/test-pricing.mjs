@@ -1,0 +1,14 @@
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';import{createRequire}from'node:module';
+const require=createRequire(import.meta.url);let output;let providerStatus=200;let providerCalls=0;let requestBody;
+const exports={};const code=ts.transpileModule(fs.readFileSync('app/api/pricing/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+vm.runInNewContext(code,{exports,require:n=>n==='cloudflare:workers'?{env:{OPENAPI_KEY:'test-key'}}:require(n),Response,Request,AbortSignal,fetch:async(url,options)=>{assert.equal(url,'https://api.openai.com/v1/responses');providerCalls++;requestBody=JSON.parse(options.body);if(providerStatus!==200)return Response.json({error:{code:'insufficient_quota'}},{status:providerStatus});return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(output)}]}]});}});
+const plans=['Starter','Growth','Business'].map(name=>({name,price:25,seats:1,units:100,features:['Core access']}));const model={title:'Test app',unit:'credits',component:'Processing',features:['Core access'],unitCost:.01};
+const input={message:'A booking app for salons with scheduling and reminders',history:[],current:{model,description:'Test app',plans},assumptions:{base:2,unitCost:.01,fee:3,fixed:.3,target:65},annual:false};
+const req=(payload,origin='https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site')=>new Request(origin+'/api/pricing',{method:'POST',headers:{origin},body:JSON.stringify(payload)});
+assert.equal((await exports.POST(req(input,'https://other.example'))).status,403);assert.equal(providerCalls,0);
+assert.equal((await exports.POST(req({...input,message:''}))).status,400);assert.equal(providerCalls,0);
+output={reply:'Here are three suggested tiers.',update:true,title:'Booking app',description:input.message,unit:'bookings',component:'Booking processing',unitCost:.01,reasoning:'Cost-based suggestions using explicit assumptions.',plans};
+let response=await exports.POST(req(input));assert.equal(response.status,200);assert.equal((await response.json()).plans.length,3);assert.equal(requestBody.store,false);assert.equal(requestBody.text.format.strict,true);assert.equal(requestBody.model,'gpt-4.1-mini');
+output={...output,plans:[{...plans[0],price:-1},plans[1],plans[2]]};response=await exports.POST(req(input));assert.equal(response.status,502);
+providerStatus=429;response=await exports.POST(req(input));assert.equal(response.status,502);assert.match((await response.json()).error,/quota/);
+console.log('Passed: origin and input validation, configured key alias, strict structured output, rejected invalid prices and quota errors.');

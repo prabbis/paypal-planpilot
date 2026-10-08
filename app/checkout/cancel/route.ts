@@ -1,0 +1,3 @@
+import {db,project,failure,type Session,type Config} from "@/lib/checkout-store";
+export const dynamic="force-dynamic";
+export async function GET(request:Request){try{const id=new URL(request.url).searchParams.get("session")??"";if(!/^[a-f0-9-]{36}$/.test(id))return new Response("Invalid checkout session.",{status:400});const s=await db().prepare("SELECT * FROM sessions WHERE id=?").bind(id).first<Session>();if(!s||Date.now()-s.created>86400000)return new Response("Checkout session expired.",{status:400});const p=await project(s.project);if(!p)throw new Error();return Response.redirect((JSON.parse(p.config) as Config).cancel,303);}catch(e){return failure(e);}}

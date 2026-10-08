@@ -51,8 +51,19 @@
 .website-options:not([open]) summary{padding-bottom:12px}
 .website-options .website-field{margin-bottom:10px;padding-bottom:10px}
 .composer-label{display:block;font-size:13px;font-weight:600;margin-bottom:8px}
+.results-toolbar{overflow-x:auto}
+.results-toolbar [data-slot=tabs-list]{width:max-content}
+.grid-editor,.integration-panel{margin:24px 0}
+.grid-editor h3,.integration-panel h3{font-size:21px;margin-bottom:10px}
+.grid-editor>p,.integration-panel>p{font-size:14px;line-height:1.7;color:#64748b;margin-bottom:18px}
+.integration-panel .cost-form{margin-top:22px}
+.integration-panel h4{font-size:16px;font-weight:600;margin:22px 0 10px}
+.integration-panel textarea{display:block;width:100%;font:13px/1.6 monospace;border:1px solid var(--border);border-radius:8px;padding:14px;background:#fff;margin-bottom:10px;resize:vertical}
+.integration-download{border-top:1px solid var(--border);padding-top:24px;margin-top:24px}
 .chat-panel{min-height:0}
 .chat-first .chat-panel{min-height:0;height:calc(100dvh - 176px)}
 @media(max-width:850px){.workspace .chat-panel{height:calc(100dvh - 150px);position:sticky;top:0;z-index:2}.workspace.has-results .chat-panel{position:relative}.chat-first .chat-messages{min-height:0;max-height:none}.workspace.has-results .chat-messages{max-height:none}.chat-first .chat-panel{min-height:0;height:calc(100dvh - 174px)}}
 @media(max-width:850px){.workspace.chat-first{padding:20px 16px}.chat-first .chat-panel{height:auto;min-height:calc(100dvh - 170px)}.chat-first .chat-messages{flex:1;min-height:220px}.chat-first .panel-heading,.chat-first .chat-messages,.chat-first .composer-area{padding:20px}}
 @media(max-width:550px){.workspace.chat-first{padding:12px}.chat-first .panel-heading h1{font-size:21px}.chat-first .example-block{grid-template-columns:1fr}.chat-first .example-block button{padding:10px}.chat-first .message-avatar{display:none}.workspace .composer-footer{flex-wrap:wrap;gap:10px}.workspace .send-button{margin-left:auto}.chat-first .chat-panel{min-height:0}}
+
+.login-page{max-width:520px;margin:70px auto;padding:24px}.login-card{margin-top:36px;padding:32px;border:1px solid #dfe5ee;border-radius:16px;background:white}.login-card h1{font-size:28px}.login-card p{line-height:1.6}.login-card button{width:100%;justify-content:center;margin-top:16px}.login-card label{display:grid;gap:8px}.login-card input{border:1px solid #ccd5e2;border-radius:8px;padding:12px}.login-divider{text-align:center;margin:24px 0;color:#667085}

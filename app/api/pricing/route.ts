@@ -1,3 +1,5 @@
+import {authGuard,firebaseUser} from "@/lib/firebase-auth";
+import {limited} from "@/lib/checkout-store";
 import {env} from "cloudflare:workers";
 import {z} from "zod";
 export const dynamic="force-dynamic";
@@ -10,10 +12,12 @@ const outputValidation=z.object({reply:z.string().min(1).max(4000),update:z.bool
 const str={type:"string"},num={type:"number"};
 const planJson={type:"object",additionalProperties:false,properties:{name:str,price:num,seats:{type:"integer"},units:{type:"integer"},features:{type:"array",items:str}},required:["name","price","seats","units","features"]};
 const outputSchema={type:"object",additionalProperties:false,properties:{reply:str,update:{type:"boolean"},title:str,description:str,unit:str,component:str,unitCost:num,reasoning:str,plans:{type:"array",items:planJson}},required:["reply","update","title","description","unit","component","unitCost","reasoning","plans"]};
-// Private Site access protects the shared key. This endpoint has no PayPal tools.
+// The owner login protects the shared AI key.
 export async function POST(request:Request){
+ const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});
  let input;try{const text=await request.text();if(text.length>35000)throw new Error();input=inputSchema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide a valid app description and pricing context."},{status:400});}
+ try{const user=(await firebaseUser())!;if(await limited("ai-global:"+new Date().toISOString().slice(0,10),100)||await limited("ai:"+user.userId+":"+new Date().toISOString().slice(0,10),20))return Response.json({error:"You’ve reached today’s 20-request demo limit."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
  if(!input.hasDraft)input.current=null;
  const config=env as unknown as Record<string,string|undefined>;
  const key=config.OPENAI_API_KEY??config.OPENAPI_KEY;

@@ -1,32 +1,29 @@
 # PlanPilot
 
-AI-assisted pricing for apps, with real PayPal sandbox billing-plan creation.
+Public chat-first app-pricing workspace with Firebase passwordless email links and Google sign-in. Customers can use published pricing tables anonymously. AG Grid Community edits tier names, prices, users, usage and features; edits invalidate the current PayPal billing snapshot.
 
-## What works
+## Runtime configuration
 
-Describe an app in the chat. OpenAI analyses its features, audience and usage to propose three editable flat-rate tiers. Follow-up messages can refine the tiers or explain the pricing. Structured responses are validated on the server. Cost assumptions remain visible, and contribution margins recalculate as prices and allowances change. AI does not call PayPal or approve plans.
+Configure FIREBASE_APIKEY, FIREBASE_AUTHDOMAIN, FIREBASE_PROJECT_ID and FIREBASE_APPID for your Firebase web app. These are public client configuration, intentionally served by /api/auth/config. Firebase Authentication must enable Google and Email link sign-in, and authorize planpilot-prabbis-demo.abisolaadeniran.chatgpt.site. Web API credentials cannot change these console settings.
 
-After explicit user approval, the PayPal integration creates a sandbox product and three active monthly or annual plans. Test subscription opens PayPal-hosted sandbox checkout; a sandbox personal account must approve the subscription. Check subscription status reads its actual status from PayPal. No live payments are supported.
+OPENAPI_KEY (or OPENAI_API_KEY), PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET and PAYPAL_OWNER_EMAIL stay server-side. AG_STUDIO_KEY is kept private and is not treated as a browser AG Grid Enterprise licence. The community editor needs no licence key.
 
-## Configuration and access
+Google's accounts:lookup endpoint verifies the signed Firebase ID token against the configured project; expired, foreign-project, disabled or unverified identities are rejected. The token lives in a Secure, HttpOnly, SameSite cookie and the browser SDK refreshes it. Authoring requires login. AI use has per-user and global daily demo limits. PayPal management, publishing and delivery inspection require the configured workspace owner. Other merchants' PayPal OAuth onboarding and credential isolation are not implemented; the demo uses one owner-configured sandbox merchant.
 
-The hosted Site must remain private. Its access policy protects the shared API key and sandbox merchant. Public use requires per-user authorization and a separate merchant-onboarding architecture. The current version uses the owner's configured sandbox app, not multi-merchant OAuth.
+## Hosted checkout
 
-Configure PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET as server-side secrets from a sandbox app. Configure OPENAI_API_KEY as a secret; OPENAPI_KEY is accepted as an alias for the current hosted configuration. OPENAI_MODEL optionally overrides the default gpt-4.1-mini. Never place credentials in browser code or commit actual keys. Hosted secrets are configured in Sites; .env.example lists local configuration names.
+D1 stores published pricing snapshots, checkout sessions, PayPal webhook registration and signed notification deliveries. Drizzle migrations own the schema. Publishing verifies all three active PayPal plans against the draft and registers or reuses this app's public /api/paypal/webhook listener. Each pricing table has a public /embed/:id page and an isolated JavaScript SDK served at /planpilot-sdk.js. Embed publish settings include HTTPS website origin, success/cancel redirects and merchant webhook URL on the same origin. The merchant is the owner who configures these URLs. Public pricing exposes no signing secrets or PayPal credentials.
 
-Use the package manager pinned in package.json to install dependencies. Run pnpm dev for development or pnpm build for a production build. POST origins are pinned to the current deployed Site. For an independent local deployment, update the route origin constants to your explicitly chosen origin and configure equivalent access protection. Browser drafts and checkout links are held in memory and reset on refresh. Sandbox products and plans persist in PayPal.
+Buyer checkout only accepts a published tier. The server checks current PayPal pricing, generates an unpredictable saved checkout session and creates a sandbox subscription with its own anonymous customer reference. PayPal return requires both the saved session and matching subscription ID, then verifies the current PayPal plan, custom reference and ACTIVE status before redirecting. Redirect query parameters are for display and never prove entitlement.
 
-## Verification
+PayPal notifications use postback signature verification with the original webhook JSON bytes and the registered webhook ID. The receiver ignores unrelated subscriptions, deduplicates event IDs and re-reads subscription state. Merchant forwarding uses timestamped HMAC-SHA256 signatures. Failed deliveries remain persisted; non-2xx responses ask PayPal to retry, and the owner can manually retry from Embed & SDK. Retried deliveries re-read current subscription status so delayed activation notifications cannot restore cancelled access. Webhook targets are HTTPS, origin constrained, validated for public DNS addresses, and redirects are not followed. Browser redirect and server webhook delivery are independent.
 
-Run node node_modules/typescript/bin/tsc --noEmit for type validation. Run node scripts/test-paypal.mjs and node scripts/test-pricing.mjs for mocked provider tests, including input validation, sandbox host restrictions, annual prices, stable retry IDs, partial successes, structured-output validation and provider errors. These tests are distinct from actual hosted API verification.
+The downloadable Node.js receiver verifies HMAC signatures and a five-minute timestamp window and has a persistent SQLite event ledger. Its account-provisioning callback deliberately fails until mapped to the merchant's app API. Anonymous references must be associated with the merchant's own authenticated users by a trusted server integration; browser-supplied user IDs must never grant access. A production multi-merchant release needs merchant onboarding, robust account mapping, operational queues and live payment testing. This release is sandbox only.
 
-To test the end-to-end experience: describe an app, review the suggested tiers, edit costs, verify the sandbox connection, approve creation, and use Test subscription with a sandbox personal account. The AI response explains its assumptions. Prices are proposals, not guarantees of customer willingness to pay.
+## Checks
 
-Prices use CAD. Annual plans charge 12 times the monthly price with a 20% discount. Monthly usage allowances and app features are enforced by the application, not PayPal. Costs assume full usage allowance consumption, a base per-account cost and CAD $0.50 per user per month, plus editable illustrative payment fees. Contribution excludes taxes, marketing, support labour and other overhead. Recalculating prices preserves user and usage allowances. Annual discounts can reduce margins below the target.
+Run node scripts/test-pricing.mjs, node scripts/test-paypal.mjs, node scripts/test-public-checkout.mjs and pnpm exec tsc --noEmit. Public-checkout tests use in-memory SQLite and mocked providers to verify authorization, pricing redaction, tier matching, redirect checks, PayPal verification bytes, durable retries and signed cancellation status. Real Google/email login and PayPal sandbox buyer approval still require interactive testing; simulator webhooks cannot use PayPal postback verification.
 
-Unchanged creation retries reuse request IDs within PayPal's idempotency window. Partial successes are shown. Inspect the sandbox dashboard after an ambiguous timeout. Draft edits never update or delete previously created PayPal plans. Keys, provider tokens and raw provider error bodies are not returned to the browser. OpenAI requests use store:false; the description and recent chat context are sent to OpenAI for processing.
+## APIMatic expansion
 
-## Hackathon deliverables still outstanding
-
-A public open-source repository with an agreed licence and a publicly available demo video under three minutes are still required. The private hosted Site is not by itself a completed submission.
-
+Accepting an API contract and language selection could support generation of merchant-specific entitlement/redirect code. That feature is not implemented here. The APIMatic PayPal Context Plugin requirement calls for actual plugin use while building the integration; ordinary documentation research and generic code generation do not establish compliance. See https://paypalaihackathon.devpost.com/details/apimatic and https://github.com/apimatic/context-matic.

@@ -1,0 +1,6 @@
+import {verifyFirebase,firebaseUser} from "@/lib/firebase-auth";
+import {SITE} from "@/lib/checkout-store";
+export const dynamic="force-dynamic";
+export async function POST(request:Request){if(request.headers.get("origin")!==SITE)return new Response(null,{status:403});try{const text=await request.text();if(text.length>12000)return new Response(null,{status:413});const {idToken}=JSON.parse(text) as {idToken:string};if(typeof idToken!=="string")return new Response(null,{status:400});const user=await verifyFirebase(idToken);if(!user)return Response.json({error:"Sign-in could not be verified. Use a verified Google account or email link."},{status:401});return Response.json({user},{headers:{"Set-Cookie":"__Host-planpilot-session="+idToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3500","Cache-Control":"no-store"}});}catch{return Response.json({error:"Sign-in could not complete."},{status:400});}}
+export async function GET(){return Response.json({user:await firebaseUser()},{headers:{"Cache-Control":"no-store"}});}
+export async function DELETE(request:Request){if(request.headers.get("origin")!==SITE)return new Response(null,{status:403});return Response.json({signedOut:true},{headers:{"Set-Cookie":"__Host-planpilot-session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0","Cache-Control":"no-store"}});}

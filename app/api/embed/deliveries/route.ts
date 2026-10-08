@@ -1,0 +1,6 @@
+import {merchantGuard,merchantUser} from "@/lib/merchant-auth";
+import {db,SITE,failure} from "@/lib/checkout-store";
+import {deliver} from "@/lib/checkout";
+export const dynamic="force-dynamic";
+export async function GET(){const denied=await merchantGuard();if(denied)return denied;try{const user=(await merchantUser())!;const rows=await db().prepare("SELECT d.id,d.project,d.delivered,d.attempts,d.created FROM deliveries d JOIN projects p ON p.id=d.project WHERE p.owner=? ORDER BY d.created DESC LIMIT 20").bind(user.userId).all();return Response.json({deliveries:rows.results},{headers:{"Cache-Control":"no-store"}});}catch(e){return failure(e);}}
+export async function POST(request:Request){const denied=await merchantGuard();if(denied)return denied;if(request.headers.get("origin")!==SITE)return new Response(null,{status:403});try{const user=(await merchantUser())!;const rows=await db().prepare("SELECT d.id FROM deliveries d JOIN projects p ON p.id=d.project WHERE p.owner=? AND d.delivered=0 ORDER BY d.created LIMIT 10").bind(user.userId).all<{id:string}>();let sent=0;for(const row of rows.results)if(await deliver(row.id))sent++;return Response.json({sent,pending:rows.results.length-sent});}catch(e){return failure(e);}}

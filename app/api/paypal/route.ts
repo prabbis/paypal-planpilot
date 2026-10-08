@@ -1,12 +1,13 @@
+import {merchantGuard} from "@/lib/merchant-auth";
 import { accessToken, paypal, routeError } from "@/lib/paypal";
 import { z } from "zod";
 export const dynamic="force-dynamic";
 const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
 const schema=z.object({requestId:z.string().uuid(),title:z.string().trim().min(1).max(127),description:z.string().max(4000),annual:z.boolean(),approved:z.literal(true),plans:z.array(z.object({name:z.string().trim().min(1).max(30),price:z.number().finite().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(30)})).length(3)});
-// This shared merchant API is protected by the private Site's platform access policy.
-// Do not make the Site public without adding per-merchant authorization.
-export async function GET(){try{await accessToken();return Response.json({connected:true,environment:"sandbox",merchant:"Configured sandbox business account"},{headers:{"Cache-Control":"no-store"}});}catch(e){return routeError(e);}}
+// Server-side owner authorization protects this shared sandbox merchant.
+export async function GET(){const denied=await merchantGuard();if(denied)return denied;try{await accessToken();return Response.json({connected:true,environment:"sandbox",merchant:"Configured sandbox business account"},{headers:{"Cache-Control":"no-store"}});}catch(e){return routeError(e);}}
 export async function POST(request:Request){
+ const denied=await merchantGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});
  if(Number(request.headers.get("content-length")??0)>25000)return Response.json({error:"Request is too large."},{status:413});
  let input;try{const text=await request.text();if(text.length>25000)throw new Error();input=schema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide three valid tiers and explicitly approve the prices."},{status:400});}

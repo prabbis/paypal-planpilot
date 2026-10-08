@@ -1,0 +1,25 @@
+import {merchantGuard,merchantUser} from "@/lib/merchant-auth";
+import {accessToken,paypal} from "@/lib/paypal";
+import {db,limited,publicUrl,publicEndpoint,SITE,failure,type Config} from "@/lib/checkout-store";
+import {z} from "zod";
+export const dynamic="force-dynamic";
+const schema=z.object({title:z.string().min(1).max(127),unit:z.string().max(50),annual:z.boolean(),website:z.string().max(2000),success:z.string().max(2000),cancel:z.string().max(2000),webhook:z.string().max(2000),plans:z.array(z.object({name:z.string().min(1).max(30),price:z.number().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(12),planId:z.string().regex(/^P-[A-Z0-9]{10,40}$/)})).length(3)});
+export async function POST(request:Request){
+ const denied=await merchantGuard();if(denied)return denied;
+ if(request.headers.get("origin")!==SITE)return Response.json({error:"Request origin is not allowed."},{status:403});
+ try{const raw=await request.text();if(raw.length>25000)return Response.json({error:"Configuration is too large."},{status:413});const input=schema.parse(JSON.parse(raw));const user=(await merchantUser())!;
+ if(await limited("publish:"+user.userId+":"+new Date().toISOString().slice(0,10),30))return Response.json({error:"Daily publish limit reached."},{status:429});
+ const website=publicUrl(input.website).origin;for(const url of [input.success,input.cancel,input.webhook]){if(publicUrl(url).origin!==website)return Response.json({error:"Redirects and webhook must use your website’s HTTPS origin."},{status:400});}await publicEndpoint(input.webhook);
+ const token=await accessToken();const plans=[];
+ for(let i=0;i<input.plans.length;i++){const p=input.plans[i];const remote=await paypal(token,"/v1/billing/plans/"+p.planId);const cycle=(remote.billing_cycles as {pricing_scheme:{fixed_price:{value:string;currency_code:string}};frequency:{interval_unit:string;interval_count:number};tenure_type:string}[])?.find(c=>c.tenure_type==="REGULAR");const amount=(input.annual?p.price*12*.8:p.price).toFixed(2);
+ if(remote.status!=="ACTIVE"||remote.name!==p.name||cycle?.pricing_scheme.fixed_price.value!==amount||cycle.pricing_scheme.fixed_price.currency_code!=="CAD"||cycle.frequency.interval_unit!==(input.annual?"YEAR":"MONTH")||cycle.frequency.interval_count!==1)return Response.json({error:"PayPal’s active plans must match this pricing draft. Recreate plans after editing."},{status:409});plans.push({...p,key:"plan-"+(i+1),amount});}
+ // One registered listener for this PayPal app, stored durably before publishing.
+ const existing=await db().prepare("SELECT value FROM settings WHERE key='paypal-webhook-id'").first<{value:string}>();
+ if(!existing){const url=SITE+"/api/paypal/webhook";const listing=await paypal(token,"/v1/notifications/webhooks");let remote=(listing.webhooks as {id:string;url:string}[])?.find(w=>w.url===url);
+ if(!remote)remote=await paypal(token,"/v1/notifications/webhooks",{url,event_types:[{name:"*"}]},"planpilot-webhook-registration") as {id:string;url:string};if(!remote.id)throw new Error("Webhook registration failed.");await db().prepare("INSERT INTO settings (key,value) VALUES ('paypal-webhook-id',?) ON CONFLICT(key) DO NOTHING").bind(remote.id).run();}
+ const id=crypto.randomUUID(),secret=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");const config:Config={...input,website,plans};
+ await db().prepare("INSERT INTO projects (id,owner,config,secret,created) VALUES (?,?,?,?,?)").bind(id,user.userId,JSON.stringify(config),secret,Date.now()).run();
+ return Response.json({id,embedUrl:SITE+"/embed/"+id,backendUrl:SITE+"/api/embed/"+id,signingSecret:secret},{headers:{"Cache-Control":"no-store"}});
+ }catch(e){if(e instanceof z.ZodError)return Response.json({error:"Complete the URLs and create three valid PayPal plans."},{status:400});return failure(e);}
+}
+export async function GET(){const denied=await merchantGuard();if(denied)return denied;try{const owner=(await merchantUser())!;const data=await db().prepare("SELECT id,config,created FROM projects WHERE owner=? ORDER BY created DESC LIMIT 20").bind(owner.userId).all();return Response.json({projects:data.results},{headers:{"Cache-Control":"no-store"}});}catch(e){return failure(e);}}

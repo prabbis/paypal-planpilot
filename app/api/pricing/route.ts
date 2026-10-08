@@ -40,6 +40,6 @@ Return the schema. Exactly three plans, names <=30 characters, prices 1..100000,
  const data=await response.json() as {status?:string;output?:{type:string;content?:{type:string;text?:string}[]}[]};
  if(data.status!=="completed")throw new Error();
  const text=data.output?.filter(o=>o.type==="message").flatMap(o=>o.content??[]).filter(c=>c.type==="output_text").map(c=>c.text??"").join("");
- const result=outputValidation.parse(JSON.parse(text??""));if(input.mode==="review")result.update=false;return Response.json({...result,sources},{headers:{"Cache-Control":"no-store"}});
- }catch(e){console.warn("Pricing request interrupted",JSON.stringify({stage,errorType:e instanceof Error?e.name:"Unknown"}));return Response.json({error:"The AI response was interrupted or did not pass validation. Your existing draft is unchanged; please retry."},{status:502});}
+ const parsed=JSON.parse(text??"");if(input.mode==="review")Object.assign(parsed,{update:false,title:input.current.model.title,description:input.current.description,unit:input.current.model.unit,component:input.current.model.component,unitCost:input.current.model.unitCost,plans:input.current.plans});const result=outputValidation.parse(parsed);return Response.json({...result,sources},{headers:{"Cache-Control":"no-store"}});
+ }catch(e){console.warn("Pricing request interrupted",JSON.stringify({stage,errorType:e instanceof Error?e.name:"Unknown",validation:e instanceof z.ZodError?e.issues.map(i=>({path:i.path,code:i.code})):undefined}));return Response.json({error:"The AI response was interrupted or did not pass validation. Your existing draft is unchanged; please retry."},{status:502});}
 }

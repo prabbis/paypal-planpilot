@@ -15,3 +15,22 @@
 @media(max-width:1100px){.workspace{grid-template-columns:300px minmax(0,1fr)}.results-panel{padding:28px 20px}.plan-grid{gap:9px}.plan-card{padding:17px 12px}.price span{font-size:29px}.recommended{font-size:10px;letter-spacing:0}.publish-bar{flex-wrap:wrap}.workspace-title h2{font-size:25px}.reasoning{flex-wrap:wrap}.text-button{margin-left:42px}.topbar{padding:0 22px}}
 @media(max-width:850px){.workspace{grid-template-columns:1fr}.chat-panel{position:static;height:auto;min-height:0;border-right:0;border-bottom:1px solid var(--border)}.chat-messages{max-height:320px;padding:20px}.panel-heading{padding:20px}.example-block{display:flex;flex-wrap:wrap;gap:8px}.example-block .eyebrow{width:100%}.example-block button{width:auto;margin:0;font-size:14px}.composer-area{padding:15px 20px}.quick-prompts{margin-bottom:8px}.chat-panel .composer-area textarea{min-height:45px}.results-panel{padding:28px 20px}.top-right{gap:10px}.brand-by{display:none}.demo-strip{font-size:12px}.topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:15px 20px}.top-right .demo-pill{display:none}.plan-card{padding:22px 16px}.price span{font-size:34px}}
 @media(max-width:550px){.workspace-title{align-items:flex-start}.workspace-title h2{font-size:24px;max-width:250px}.draft-badge{font-size:12px;padding:6px}.plan-grid{grid-template-columns:1fr;gap:15px}.plan-card{padding:25px}.plan-audience{min-height:0;margin:8px 0 16px}.features{margin-bottom:15px}.section-toolbar{align-items:flex-start;flex-direction:column;gap:15px}.results-toolbar [data-slot=tabs-trigger]{font-size:14px;padding:9px 7px}.results-toolbar [data-slot=tabs-trigger] svg{display:none}.results-panel{padding:25px 16px}.publish-bar{padding:17px}.publish-bar .button{width:100%}.cost-form{grid-template-columns:1fr;padding:17px}.paypal-process{flex-direction:column;gap:12px}.paypal-panel{padding:30px 20px}.created-results>div{flex-wrap:wrap}.created-results b{margin-left:28px}.form-pair{grid-template-columns:1fr}.brand{font-size:20px}.topbar .button{padding:9px 10px;font-size:13px}}
+
+/* The first visit is a focused chat; generated plans unlock the workspace. */
+.workspace.chat-first{display:block;max-width:850px;padding:32px 24px;margin:0 auto}
+.chat-first .chat-panel{position:static;height:calc(100dvh - 176px);min-height:550px;border:1px solid #dfe5ee;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px #17243b08}
+.chat-first .panel-heading{padding:25px 28px}
+.chat-first .panel-heading h1{font-size:24px;letter-spacing:-.7px}
+.chat-first .panel-heading p{font-size:14px;line-height:1.5}
+.chat-first .chat-messages{padding:25px 28px;max-height:none}
+.chat-first .message p{font-size:16px;line-height:1.7}
+.chat-first .example-block{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.chat-first .example-block .eyebrow{grid-column:1/-1}
+.chat-first .example-block button{width:100%;margin:0;line-height:1.5}
+.chat-first .composer-area{padding:20px 28px}
+.chat-first .composer-area textarea{font-size:16px}
+.workspace .send-button{width:auto;min-width:36px;height:38px;display:flex;gap:8px;padding:0 12px;font-size:13px;font-weight:600}
+.workspace .composer-footer span{font-size:11px}
+.workspace .send-button span{color:inherit;font:inherit}
+@media(max-width:850px){.workspace.chat-first{padding:20px 16px}.chat-first .chat-panel{height:auto;min-height:calc(100dvh - 170px)}.chat-first .chat-messages{flex:1;min-height:220px}.chat-first .panel-heading,.chat-first .chat-messages,.chat-first .composer-area{padding:20px}}
+@media(max-width:550px){.workspace.chat-first{padding:12px}.chat-first .panel-heading h1{font-size:21px}.chat-first .example-block{grid-template-columns:1fr}.chat-first .example-block button{padding:10px}.chat-first .message-avatar{display:none}.workspace .composer-footer{flex-wrap:wrap;gap:10px}.workspace .send-button{margin-left:auto}.chat-first .chat-panel{min-height:0}}

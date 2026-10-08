@@ -20,5 +20,12 @@ assert.equal(JSON.parse(requestBody.input.at(-1).content).websiteResearch.includ
 response=await exports.POST(req({...input,website:'https://example.com',mode:'review'}));let reviewed=await response.json();assert.equal(response.status,200);assert.equal(reviewed.update,false);assert.equal(reviewed.sources.length,1);assert.equal(reviewed.sources[0].url,'https://example.com/pricing');
 researchAvailable=false;response=await exports.POST(req({...input,website:'https://example.com'}));assert.equal(response.status,502);assert.match((await response.json()).error,/couldn’t verify/);
 researchAvailable=true;
+// No existing draft is sent to the AI, even for older clients supplying sample state.
+response=await exports.POST(req({...input,website:'https://example.com',mode:'review',hasDraft:false}));
+let emptyReview=await response.json();assert.equal(response.status,200);assert.deepEqual(emptyReview.plans,[]);assert.equal(JSON.parse(requestBody.input.at(-1).content).current,null);
+response=await exports.POST(req({...input,website:'https://example.com',mode:'review',hasDraft:true}));
+assert.deepEqual((await response.json()).plans,plans);assert.equal(JSON.parse(requestBody.input.at(-1).content).current.model.title,'Test app');
+response=await exports.POST(req({...input,current:null,message:'What should I improve first?',history:[{role:'assistant',text:'Your published pricing has gaps.'}]}));
+assert.equal(response.status,200);assert.equal(requestBody.input[0].content,'Your published pricing has gaps.');assert.equal(JSON.parse(requestBody.input.at(-1).content).current,null);
 providerStatus=429;response=await exports.POST(req(input));assert.equal(response.status,502);assert.match((await response.json()).error,/quota/);
 console.log('Passed: origin and input validation, configured key alias, strict structured output, rejected invalid prices and quota errors.');

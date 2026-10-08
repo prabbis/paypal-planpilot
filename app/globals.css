@@ -32,5 +32,11 @@
 .workspace .send-button{width:auto;min-width:36px;height:38px;display:flex;gap:8px;padding:0 12px;font-size:13px;font-weight:600}
 .workspace .composer-footer span{font-size:11px}
 .workspace .send-button span{color:inherit;font:inherit}
+.website-field{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.website-field label{display:block;font-size:13px;font-weight:600;margin-bottom:8px}
+.website-field label span{font-weight:400;color:#64748b}
+.website-field input{width:100%;border:1px solid #cbd6e6;border-radius:7px;padding:10px 12px;font-size:16px;background:#fff;color:#17243b}
+.website-field p{font-size:12px;line-height:1.5;color:#64748b;margin-top:7px}
+.website-field .website-error{color:#b42318}
 @media(max-width:850px){.workspace.chat-first{padding:20px 16px}.chat-first .chat-panel{height:auto;min-height:calc(100dvh - 170px)}.chat-first .chat-messages{flex:1;min-height:220px}.chat-first .panel-heading,.chat-first .chat-messages,.chat-first .composer-area{padding:20px}}
 @media(max-width:550px){.workspace.chat-first{padding:12px}.chat-first .panel-heading h1{font-size:21px}.chat-first .example-block{grid-template-columns:1fr}.chat-first .example-block button{padding:10px}.chat-first .message-avatar{display:none}.workspace .composer-footer{flex-wrap:wrap;gap:10px}.workspace .send-button{margin-left:auto}.chat-first .chat-panel{min-height:0}}

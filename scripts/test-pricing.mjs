@@ -1,7 +1,7 @@
 import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';import{createRequire}from'node:module';
-const require=createRequire(import.meta.url);let output;let providerStatus=200;let providerCalls=0;let requestBody;
+const require=createRequire(import.meta.url);let output;let providerStatus=200;let providerCalls=0;let requestBody;let researchBody;let researchAvailable=true;
 const exports={};const code=ts.transpileModule(fs.readFileSync('app/api/pricing/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-vm.runInNewContext(code,{exports,require:n=>n==='cloudflare:workers'?{env:{OPENAPI_KEY:'test-key'}}:require(n),Response,Request,URL,AbortSignal,fetch:async(url,options)=>{assert.equal(url,'https://api.openai.com/v1/responses');providerCalls++;requestBody=JSON.parse(options.body);if(providerStatus!==200)return Response.json({error:{code:'insufficient_quota'}},{status:providerStatus});return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(output)}]}]});}});
+vm.runInNewContext(code,{exports,require:n=>n==='cloudflare:workers'?{env:{OPENAPI_KEY:'test-key'}}:require(n),Response,Request,URL,AbortSignal,fetch:async(url,options)=>{assert.equal(url,'https://api.openai.com/v1/responses');providerCalls++;requestBody=JSON.parse(options.body);if(providerStatus!==200)return Response.json({error:{code:'insufficient_quota'}},{status:providerStatus});if(requestBody.tools){researchBody=requestBody;return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:researchAvailable?[{url:'https://example.com/pricing',title:'Published pricing'},{url:'javascript:alert(1)'},{url:'https://other.example/pricing'}]:[]}},{type:'message',content:[{type:'output_text',text:'Published Starter plan: USD $20 monthly; scheduling and reminders. Costs are unknown.'}]}]});}return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(output)}]}]});}});
 const plans=['Starter','Growth','Business'].map(name=>({name,price:25,seats:1,units:100,features:['Core access']}));const model={title:'Test app',unit:'credits',component:'Processing',features:['Core access'],unitCost:.01};
 const input={message:'A booking app for salons with scheduling and reminders',history:[],current:{model,description:'Test app',plans},assumptions:{base:2,unitCost:.01,fee:3,fixed:.3,target:65},annual:false};
 const req=(payload,origin='https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site')=>new Request(origin+'/api/pricing',{method:'POST',headers:{origin},body:JSON.stringify(payload)});
@@ -15,6 +15,10 @@ for(const website of ['javascript:alert(1)','https://user:secret@example.com','n
 assert.equal(providerCalls,callsBeforeInvalidWebsite);
 output={...output,plans};response=await exports.POST(req({...input,website:'https://example.com'}));assert.equal(response.status,200);
 assert.equal(JSON.parse(requestBody.input.at(-1).content).website,'https://example.com');
-assert.match(requestBody.instructions,/cannot browse or fetch/);
+assert.equal(researchBody.tool_choice,'required');assert.deepEqual(researchBody.tools[0].filters.allowed_domains,['example.com']);
+assert.equal(JSON.parse(requestBody.input.at(-1).content).websiteResearch.includes('USD $20'),true);
+response=await exports.POST(req({...input,website:'https://example.com',mode:'review'}));let reviewed=await response.json();assert.equal(response.status,200);assert.equal(reviewed.update,false);assert.equal(reviewed.sources.length,1);assert.equal(reviewed.sources[0].url,'https://example.com/pricing');
+researchAvailable=false;response=await exports.POST(req({...input,website:'https://example.com'}));assert.equal(response.status,502);assert.match((await response.json()).error,/couldn’t verify/);
+researchAvailable=true;
 providerStatus=429;response=await exports.POST(req(input));assert.equal(response.status,502);assert.match((await response.json()).error,/quota/);
 console.log('Passed: origin and input validation, configured key alias, strict structured output, rejected invalid prices and quota errors.');

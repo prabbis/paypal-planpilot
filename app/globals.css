@@ -38,5 +38,12 @@
 .website-field input{width:100%;border:1px solid #cbd6e6;border-radius:7px;padding:10px 12px;font-size:16px;background:#fff;color:#17243b}
 .website-field p{font-size:12px;line-height:1.5;color:#64748b;margin-top:7px}
 .website-field .website-error{color:#b42318}
+.research-mode{border:0;padding:0;margin-top:12px;display:flex;gap:12px;flex-wrap:wrap}
+.research-mode legend{font-size:12px;color:#64748b;margin-bottom:8px}
+.research-mode label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;margin:0}
+.research-mode input{width:16px;height:16px;accent-color:#2455dd}
+.message p{white-space:pre-wrap}
+.research-sources{padding-left:20px;margin:12px 0 0;font-size:12px;line-height:1.6}
+.research-sources a{color:#2455dd;text-decoration:underline;overflow-wrap:anywhere}
 @media(max-width:850px){.workspace.chat-first{padding:20px 16px}.chat-first .chat-panel{height:auto;min-height:calc(100dvh - 170px)}.chat-first .chat-messages{flex:1;min-height:220px}.chat-first .panel-heading,.chat-first .chat-messages,.chat-first .composer-area{padding:20px}}
 @media(max-width:550px){.workspace.chat-first{padding:12px}.chat-first .panel-heading h1{font-size:21px}.chat-first .example-block{grid-template-columns:1fr}.chat-first .example-block button{padding:10px}.chat-first .message-avatar{display:none}.workspace .composer-footer{flex-wrap:wrap;gap:10px}.workspace .send-button{margin-left:auto}.chat-first .chat-panel{min-height:0}}

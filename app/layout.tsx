@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import DashboardShell from "@/components/dashboard-shell";
 
 export const metadata: Metadata = {
   title: "PlanPilot — Pricing plans & AI stores",
@@ -20,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><DashboardShell>{children}</DashboardShell></body>
     </html>
   );
 }

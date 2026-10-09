@@ -12,3 +12,8 @@ output=JSON.stringify({...generated,accent:'navy'});r=await route.POST(request()
 output=JSON.stringify({...generated,headline:'x'.repeat(161)});assert.equal((await route.POST(request(),params)).status,502);
 status=401;r=await route.POST(request(),params);assert.equal(r.status,502);assert.match((await r.json()).error,/AI could not generate/);
 console.log('Passed: AI route generates usable drafts, preserves branding, supports shorthand colours, explains invalid model output and handles provider failures.');
+const product={id:webcrypto.randomUUID(),name:'Bag pattern',description:'Original',type:'digital',price:35,image:'https://example.com/bag.png',enabled:true,fileKey:'stores/example/downloads/guide',fileName:'guide.pdf',paypalProductId:''};
+const merchant={...existing,name:'My actual brand',accent:'#112233',tagline:'My actual tagline',products:[product]};
+let personalised=ai.generatedStore(JSON.stringify(generated),merchant,{keepBrand:true,useProducts:true,optimise:false});assert.equal(personalised.name,merchant.name);assert.equal(personalised.accent,merchant.accent);assert.equal(personalised.products[0].price,35);assert.equal(personalised.products[0].id,product.id);assert.equal(personalised.products[0].image,product.image);assert.equal(personalised.products[0].fileKey,product.fileKey);
+personalised=ai.generatedStore(JSON.stringify(generated),merchant,{keepBrand:true,useProducts:true,optimise:true});assert.equal(personalised.products[0].price,12);
+console.log('Passed: guided generation preserves merchant prices, product IDs, images, downloads and branding; optimisation is opt-in.');

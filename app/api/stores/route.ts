@@ -1,0 +1,6 @@
+import {firebaseUser} from "@/lib/firebase-auth";
+import {db,limited} from "@/lib/checkout-store";
+import {blankStore,sameOrigin,storeError,StoreError} from "@/lib/stores";
+export const dynamic="force-dynamic";
+export async function GET(){try{const u=await firebaseUser();if(!u)throw new StoreError("Sign in to manage your stores.",401);const rows=await db().prepare("SELECT id,slug,draft,published,created,credentials FROM stores WHERE owner=? ORDER BY created DESC").bind(u.userId).all();return Response.json({stores:rows.results.map(({credentials,...s})=>({...s,connected:!!credentials}))},{headers:{"Cache-Control":"no-store"}});}catch(e){return storeError(e);}}
+export async function POST(request:Request){try{sameOrigin(request);const u=await firebaseUser();if(!u)throw new StoreError("Sign in to create your store.",401);if(await limited("store-create:"+u.userId+":"+new Date().toISOString().slice(0,10),10))throw new StoreError("Daily store creation limit reached.",429);const id=crypto.randomUUID();await db().prepare("INSERT INTO stores (id,owner,draft,created) VALUES (?,?,?,?)").bind(id,u.userId,JSON.stringify(blankStore),Date.now()).run();return Response.json({id});}catch(e){return storeError(e);}}

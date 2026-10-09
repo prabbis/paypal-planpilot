@@ -11,7 +11,7 @@ assert.equal(await provider.accessToken(),'test-token');assert.equal(requests[0]
 await provider.paypal('test-token','/v1/catalogs/products',{name:'Test'},'stable-request-id');assert.equal(requests[1].options.headers['PayPal-Request-Id'],'stable-request-id');
 const calls=[];let fail=false;
 const mock={accessToken:async()=> 'token',paypal:async(token,path,body,id)=>{calls.push({path,body,id});if(path.includes('products'))return{id:'PROD-TEST123'};if(fail&&calls.filter(c=>c.path.includes('billing/plans')).length===2)throw new Error('failed');return{id:'P-TEST1234567890'+calls.length,status:'ACTIVE'};},routeError:()=>Response.json({error:'Provider failure'},{status:502})};
-const route=load('app/api/paypal/route.ts',{'@/lib/paypal':mock,'@/lib/merchant-auth':{merchantGuard:async()=>null}});
+const route=load('app/api/paypal/route.ts',{'@/lib/paypal':mock,'@/lib/firebase-auth':{authGuard:async()=>null},'@/lib/billing-auth':{billingToken:async()=> 'token'},'@/lib/stores':{storeError:()=>Response.json({error:'failed'},{status:502})}});
 const payload={requestId:'550e8400-e29b-41d4-a716-446655440000',title:'Test app',description:'Test',annual:true,approved:true,plans:['Starter','Growth','Business'].map(name=>({name,price:25,seats:1,units:100,features:['Core access']}))};
 const req=(data,origin='https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site')=>new Request(origin+'/api/paypal',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(data)});
 assert.equal((await route.POST(req(payload,'https://other.example'))).status,403);

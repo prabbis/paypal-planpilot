@@ -1,0 +1,1 @@
+export function safeReturnPath(value:string|null,origin:string){if(!value?.startsWith("/")||value.startsWith("//"))return "/";try{const u=new URL(value,origin);if(u.origin!==origin||u.pathname==="/login")return "/";return u.pathname+u.search+u.hash;}catch{return "/";}}

@@ -1,8 +1,10 @@
 import {accessToken,paypal} from "./paypal";
+import {publishedToken} from "./billing-auth";
 import {db,project,publicEndpoint,setting,type Session,type Config} from "./checkout-store";
 export async function authoritative(session:Session,token?:string){
  if(!session.subscription)throw new Error("Subscription is pending.");
- const sub=await paypal(token??await accessToken(),"/v1/billing/subscriptions/"+session.subscription);
+ const p=await project(session.project);if(!p)throw new Error("Pricing project unavailable.");const config=JSON.parse(p.config) as Config;
+ const sub=await paypal(token??await publishedToken(config,p.owner),"/v1/billing/subscriptions/"+session.subscription);
  if(sub.plan_id!==session.plan||sub.custom_id!==session.reference)throw new Error("Subscription does not match this checkout.");
  await db().prepare("UPDATE sessions SET status=? WHERE id=?").bind(String(sub.status),session.id).run();
  return sub;

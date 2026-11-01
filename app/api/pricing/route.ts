@@ -3,7 +3,7 @@ import {limited} from "@/lib/checkout-store";
 import {env} from "cloudflare:workers";
 import {z} from "zod";
 import {PricingBudgetError} from "@/lib/pricing-economics";
-import {inputSchema,outputSchema,parsePricingOutput} from "@/lib/pricing-contract";
+import {inputSchema,outputSchema,parsePricingOutput,serviceClarification} from "@/lib/pricing-contract";
 export const dynamic="force-dynamic";
 const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
 // The owner login protects the shared AI key.
@@ -13,6 +13,10 @@ export async function POST(request:Request){
  let input;try{const text=await request.text();if(text.length>380000)throw new Error();input=inputSchema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide a valid app description and pricing context."},{status:400});}
  try{const user=(await firebaseUser())!;if(await limited("ai-global:"+new Date().toISOString().slice(0,10),100)||await limited("ai:"+user.userId+":"+new Date().toISOString().slice(0,10),20))return Response.json({error:"You’ve reached today’s 20-request demo limit."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
  if(!input.hasDraft)input.current=null;
+ const userEvidence=[...input.history.filter(m=>m.role==="user").map(m=>m.text),input.message].join("\n");
+ const directService=input.offering.kind==="service"||(/\b(?:with me|my coaching|my consulting|professional services|I (?:offer|provide).{0,30}(?:coaching|consulting|appointments))\b/i.test(userEvidence)&&!/\b(?:app|platform|software)\s+(?:for|that|which)\b/i.test(userEvidence));
+ if(directService&&serviceClarification(input)){const once=/\bone[- ](?:off|time)\b|\bonce\b|\bper[- ](?:session|call|appointment)\b/i.test(userEvidence);const result=parsePricingOutput({offering:{kind:"service",billing:once?"one_time":"unspecified",structure:"independent",priceUnit:"appointment",audiences:[],showParticipants:false,showUsage:false},assessment:{confidence:"low",assumptions:[],missing:["Confirm appointment duration and payment structure before pricing."],risks:[]},workload:input.workload,update:false,reply:"",reasoning:"Awaiting service details.",title:"Your offer",description:"",unit:"delivery minutes",component:"Delivery time",unitCost:input.assumptions.unitCost,plans:[]},input);return Response.json({...result,sources:[]},{headers:{"Cache-Control":"no-store"}});}
+
  const config=env as unknown as Record<string,string|undefined>;
  const key=config.OPENAI_API_KEY??config.OPENAPI_KEY;
  if(!key)return Response.json({error:"An OpenAI API key is not configured."},{status:503});

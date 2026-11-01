@@ -3,8 +3,8 @@ import "./globals.css";
 import DashboardShell from "@/components/dashboard-shell";
 
 export const metadata: Metadata = {
-  title: "PlanPilot — Pricing plans & AI stores",
-  description: "Create pricing plans and editable stores with AI. Sell services, physical products and digital downloads with PayPal sandbox checkout. By Prabbis.",
+  title: "PlanPilot — AI pricing & PayPal subscriptions",
+  description: "Turn your app idea into subscription pricing with AI. Refine tiers, check margins, create PayPal billing plans and test subscription checkout. By Prabbis.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

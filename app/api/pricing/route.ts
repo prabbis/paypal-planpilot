@@ -10,8 +10,8 @@ const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});
- let input;try{const text=await request.text();if(text.length>380000)throw new Error();input=inputSchema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide a valid app description and pricing context."},{status:400});}
- try{const user=(await firebaseUser())!;if(await limited("ai-global:"+new Date().toISOString().slice(0,10),100)||await limited("ai:"+user.userId+":"+new Date().toISOString().slice(0,10),20))return Response.json({error:"You’ve reached today’s 20-request demo limit."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
+ let input;try{const text=await request.text();if(text.length>380000)throw new Error();input=inputSchema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide a valid offer description and pricing context."},{status:400});}
+
  if(!input.hasDraft)input.current=null;
  const userEvidence=[...input.history.filter(m=>m.role==="user").map(m=>m.text),input.message].join("\n");
  const directService=input.offering.kind==="service"||(/\b(?:with me|my coaching|my consulting|professional services|I (?:offer|provide).{0,30}(?:coaching|consulting|appointments))\b/i.test(userEvidence)&&!/\b(?:app|platform|software)\s+(?:for|that|which)\b/i.test(userEvidence));
@@ -20,6 +20,7 @@ export async function POST(request:Request){
  const config=env as unknown as Record<string,string|undefined>;
  const key=config.OPENAI_API_KEY??config.OPENAPI_KEY;
  if(!key)return Response.json({error:"An OpenAI API key is not configured."},{status:503});
+ try{const user=(await firebaseUser())!;const day=new Date().toISOString().slice(0,10);if(await limited("ai:"+user.userId+":"+day,50))return Response.json({error:"You’ve reached today’s 50-request demo allowance."},{status:429});if(await limited("ai-global:"+day,100))return Response.json({error:"Today’s shared demo AI allowance has been used. Please try again after the daily reset."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
  let stage="website research";
  try{
  let marketSummary="";let websiteResearch="";let sources:{url:string;title:string}[]=[];

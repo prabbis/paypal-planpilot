@@ -15,6 +15,13 @@
       "when": 1791528006279,
       "tag": "0001_magical_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793521758800,
+      "tag": "0002_sour_leopardon",
+      "breakpoints": true
     }
   ]
 }

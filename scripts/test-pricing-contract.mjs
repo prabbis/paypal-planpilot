@@ -6,17 +6,18 @@ const compile=p=>ts.transpileModule(fs.readFileSync(p,'utf8'),{compilerOptions:{
 const data=code=>'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
 const zod=JSON.stringify(pathToFileURL(process.cwd()+'/node_modules/zod/index.js').href);
 const offering=data(compile('lib/offering.ts').replace('"zod"',zod));
+const serviceCost=data(compile("lib/service-cost.ts").replace('"zod"',zod));
 const econ=data(compile('lib/pricing-economics.ts'));
-const contract=data(compile('lib/pricing-contract.ts').replace('"zod"',zod).replace('"./pricing-economics"',JSON.stringify(econ)).replace('"./offering"',JSON.stringify(offering)));
+const contract=data(compile('lib/pricing-contract.ts').replace('"zod"',zod).replace('"./pricing-economics"',JSON.stringify(econ)).replace('"./offering"',JSON.stringify(offering)).replace('"./service-cost"',JSON.stringify(serviceCost)));
 const {economics,minimumPrice}=await import(econ);
 const {defaultOffering}=await import(offering);
 const {inputSchema,parsePricingOutput}=await import(contract);
-const {chatSnapshotSchema}=await import(data(compile('lib/pricing-chat.ts').replace('"zod"',zod).replace('"./offering"',JSON.stringify(offering))));
+const {chatSnapshotSchema}=await import(data(compile('lib/pricing-chat.ts').replace('"zod"',zod).replace('"./offering"',JSON.stringify(offering)).replace('"./service-cost"',JSON.stringify(serviceCost))));
 const workload={unitDefinition:'delivery minute',workflow:'Prepare, deliver and follow up',resources:'Human delivery time',costBasis:'estimated',typicalUsage:40,retryPercent:0,reservePercent:10,overhead:5,labourRate:60,labourMinutesPerUnit:1,participantCost:0};
 const assumptions={base:2,unitCost:0,fee:3,fixed:.3,target:65};
 const service={kind:'service',billing:'one_time',structure:'independent',priceUnit:'session',audiences:['For a focused leadership challenge'],showParticipants:false,showUsage:false};
 const input=inputSchema.parse({message:'One-off leadership coaching: a 60-minute appointment plus 30 minutes preparation and follow-up; use CAD 60 per hour for my time',history:[],assumptions,annual:false,workload,offering:service});
-const raw={offering:service,featureRows:[],workload,assessment:{confidence:'low',assumptions:[],missing:[],risks:[]},reply:'Here is the proposed session.',update:true,title:'Leadership coaching',description:'One-off appointments',unit:'delivery minutes per month',component:'Delivery time',unitCost:0,reasoning:'Includes delivery and preparation.',plans:[{name:'Leadership coaching session',price:100,seats:1,units:90,features:['60-minute coaching session','30 minutes of preparation and follow-up'],guardrails:{rules:['One appointment per booking'],atLimit:'Book another appointment'}}]};
+const raw={offering:service,featureRows:[],workload,assessment:{confidence:'low',assumptions:[],missing:[],risks:[]},reply:'Here is the proposed session.',update:true,title:'Leadership coaching',description:'One-off appointments',unit:'delivery minutes per month',component:'Delivery time',unitCost:0,reasoning:'Includes delivery and preparation.',plans:[{delivery:{durationMinutes:60,preparationMinutes:15,followUpMinutes:15,internalHourlyCost:250,otherCost:0,rateKnown:true},name:'Leadership coaching session',price:100,seats:1,units:90,features:['60-minute coaching session','30 minutes of preparation and follow-up'],guardrails:{rules:['One appointment per booking'],atLimit:'Book another appointment'}}]};
 const result=parsePricingOutput(raw,input);
 assert.equal(result.plans.length,1);assert.equal(result.unit,'delivery minutes');assert.equal(result.offering.billing,'one_time');assert.equal(result.offering.showParticipants,false);assert.equal(result.workload.typicalUsage,100);
 assert.equal(result.plans[0].price,minimumPrice(result.plans[0],assumptions,workload,false));
@@ -36,3 +37,15 @@ const legacy=chatSnapshotSchema.parse(snapshot);assert.equal(legacy.offering.bil
 assert.equal(chatSnapshotSchema.parse({...snapshot,offering:service}).offering.billing,'one_time');
 const missing=parsePricingOutput(raw,{...input,message:"I want discovery calls and leadership coaching appointments",history:[]});assert.equal(missing.needsClarification,true);assert.equal(missing.update,false);assert(!missing.reply.includes("350"));const needsTerms=parsePricingOutput(raw,{...input,message:"Discovery calls are one-off 30-minute appointments",history:[]});assert.equal(needsTerms.update,false);assert(needsTerms.reply.includes("complimentary or paid"));
 console.log('Passed: appointment pricing, programme packages, human-time costs, clarification, software regressions, both billing margin floors, unit labels and saved-chat compatibility.');
+
+const pairRaw={...raw,plans:[30,60].map(n=>({...raw.plans[0],name:n+'-Minute Discovery Call',features:[n+'-minute discovery call'],units:180,delivery:{...raw.plans[0].delivery,durationMinutes:60,preparationMinutes:5,followUpMinutes:5}}))};
+const pair=parsePricingOutput(pairRaw,{...input,message:'Paid one-off discovery calls of 30 minutes and 60 minutes. Use CAD 30 per hour for my time.'});
+assert.deepEqual(pair.plans.map(p=>p.delivery.durationMinutes),[30,60]);assert(pair.plans[1].price>pair.plans[0].price);assert(economics(pair.plans[1],assumptions,workload,false).cost>economics(pair.plans[0],assumptions,workload,false).cost);
+const estimate=parsePricingOutput(pairRaw,{...input,message:'Paid one-off discovery calls: 30 minutes, 60 minutes. Give me an estimate.'});assert(estimate.plans.every(p=>!p.delivery.rateKnown&&p.delivery.internalHourlyCost===0));assert(estimate.plans.every(p=>p.price===100));
+const retail=parsePricingOutput(pairRaw,{...input,message:'Paid one-off discovery calls: 30 minutes, 60 minutes. Estimate them; I charge clients CAD 250 per hour.'});assert(retail.plans.every(p=>!p.delivery.rateKnown));
+const {verifiedOrder}=await import(data(compile('lib/one-time-checkout.ts').replace('"zod"',zod)));
+const order={id:'ORDER123456789',status:'COMPLETED',purchase_units:[{custom_id:'server-reference',payments:{captures:[{id:'CAPTURE123',status:'COMPLETED',amount:{currency_code:'CAD',value:'75.00'}}]}}]};
+const expected={order:'ORDER123456789',reference:'server-reference',amount:'75.00'};assert.equal(verifiedOrder(order,expected),'CAPTURE123');assert.throws(()=>verifiedOrder(order,{...expected,amount:'100.00'}));assert.throws(()=>verifiedOrder(order,{...expected,reference:'someone-else'}));assert.throws(()=>verifiedOrder({...order,status:'APPROVED'},expected));assert.throws(()=>verifiedOrder({...order,purchase_units:[{...order.purchase_units[0],payments:{captures:[{...order.purchase_units[0].payments.captures[0],amount:{currency_code:'USD',value:'75.00'}}]}}]},expected));
+console.log('Passed: distinct 30/60-minute delivery costs, unknown vs retail/internal rates, no guessed-cost markup, and authoritative order/capture/amount/currency verification.');
+
+const {confirmedInternalRate}=await import(serviceCost);assert.equal(confirmedInternalRate('My internal hourly cost is CAD 30'),30);assert.equal(confirmedInternalRate('Use CAD 60 per hour for my time'),60);assert.equal(confirmedInternalRate('I do not know my internal cost; I charge clients CAD 250 per hour'),null);

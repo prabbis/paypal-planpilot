@@ -2,13 +2,14 @@ import {authGuard,firebaseUser} from "@/lib/firebase-auth";
 import {billingToken} from "@/lib/billing-auth";
 import {accessToken,paypal} from "@/lib/paypal";
 import {db,limited,publicUrl,publicEndpoint,SITE,failure,type Config} from "@/lib/checkout-store";
+import {oneTimePublication} from "@/lib/one-time-checkout";
 import {z} from "zod";
 export const dynamic="force-dynamic";
 const schema=z.object({storeId:z.string().uuid().optional(),title:z.string().min(1).max(127),unit:z.string().max(50),annual:z.boolean(),website:z.string().max(2000),success:z.string().max(2000),cancel:z.string().max(2000),webhook:z.string().max(2000),plans:z.array(z.object({name:z.string().min(1).max(30),price:z.number().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(12),planId:z.string().regex(/^P-[A-Z0-9]{10,40}$/)})).min(1).max(3)});
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==SITE)return Response.json({error:"Request origin is not allowed."},{status:403});
- try{const raw=await request.text();if(raw.length>25000)return Response.json({error:"Configuration is too large."},{status:413});const input=schema.parse(JSON.parse(raw));const user=(await firebaseUser())!;
+ try{const raw=await request.text();if(raw.length>25000)return Response.json({error:"Configuration is too large."},{status:413});const data=JSON.parse(raw);if(data.billing==="one_time"){const input=oneTimePublication.parse(data);const user=(await firebaseUser())!;if(await limited("publish:"+user.userId+":"+new Date().toISOString().slice(0,10),30))return Response.json({error:"Daily publish limit reached."},{status:429});await billingToken(input.storeId);const website=input.website?publicUrl(input.website).origin:SITE;const bookingUrl=input.bookingUrl?publicUrl(input.bookingUrl).href:"";const id=crypto.randomUUID();const secret=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");const config:Config={...input,website,bookingUrl,annual:false,success:"",cancel:"",webhook:"",plans:input.plans.map((p,i)=>({...p,key:"plan-"+(i+1),planId:"",amount:p.price.toFixed(2)}))};await db().prepare("INSERT INTO projects (id,owner,config,secret,created) VALUES (?,?,?,?,?)").bind(id,user.userId,JSON.stringify(config),secret,Date.now()).run();return Response.json({id,embedUrl:SITE+"/embed/"+id,backendUrl:SITE+"/api/embed/"+id},{headers:{"Cache-Control":"no-store"}});}const input=schema.parse(data);const user=(await firebaseUser())!;
  if(await limited("publish:"+user.userId+":"+new Date().toISOString().slice(0,10),30))return Response.json({error:"Daily publish limit reached."},{status:429});
  const website=publicUrl(input.website).origin;for(const url of [input.success,input.cancel,input.webhook]){if(publicUrl(url).origin!==website)return Response.json({error:"Redirects and webhook must use your website’s HTTPS origin."},{status:400});}await publicEndpoint(input.webhook);
  const token=await billingToken(input.storeId);const plans=[];

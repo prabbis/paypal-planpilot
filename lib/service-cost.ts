@@ -1,0 +1,7 @@
+import {z} from "zod";
+export const deliverySchema=z.object({durationMinutes:z.number().min(1).max(10000),preparationMinutes:z.number().min(0).max(10000),followUpMinutes:z.number().min(0).max(10000),internalHourlyCost:z.number().min(0).max(10000),otherCost:z.number().min(0).max(10000),rateKnown:z.boolean()});
+export type DeliveryCost=z.infer<typeof deliverySchema>;
+export function describedMinutes(name:string,features:string[]){const text=[name,...features].join(" ");const match=text.match(/\b(\d+)\s*[-–]?\s*(minutes?|mins?|hours?|hrs?)\b/i);return match?Number(match[1])*(/^h/i.test(match[2])?60:1):null;}
+export const deliveryJson={anyOf:[{type:"null"},{type:"object",additionalProperties:false,properties:{durationMinutes:{type:"number"},preparationMinutes:{type:"number"},followUpMinutes:{type:"number"},internalHourlyCost:{type:"number"},otherCost:{type:"number"},rateKnown:{type:"boolean"}},required:["durationMinutes","preparationMinutes","followUpMinutes","internalHourlyCost","otherCost","rateKnown"]}]};
+
+export function confirmedInternalRate(text:string){const patterns=[/\b(?:internal (?:hourly )?(?:labour )?cost|hourly (?:delivery |labour )?cost|cost of my time)\s*(?:is|:|=|of)?\s*(?:CAD\s*)?\$?\s*(\d+(?:\.\d+)?)/i,/\b(?:use|allow)\s+(?:CAD\s*)?\$?\s*(\d+(?:\.\d+)?)\s*(?:\/|per|an?)\s*hour\s+(?:for my time|as (?:my )?(?:internal|delivery|labour) cost)/i,/\bvalue my time at\s+(?:CAD\s*)?\$?\s*(\d+(?:\.\d+)?)/i];for(const pattern of patterns){const m=text.match(pattern);if(m&&Number(m[1])<=10000)return Number(m[1]);}return null;}

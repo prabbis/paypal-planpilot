@@ -22,6 +22,13 @@
       "when": 1793521758800,
       "tag": "0002_sour_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793527962187,
+      "tag": "0003_closed_exiles",
+      "breakpoints": true
     }
   ]
 }

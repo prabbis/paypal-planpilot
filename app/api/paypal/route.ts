@@ -5,14 +5,14 @@ import { accessToken, paypal, routeError } from "@/lib/paypal";
 import { z } from "zod";
 export const dynamic="force-dynamic";
 const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
-const schema=z.object({storeId:z.string().uuid().optional(),requestId:z.string().uuid(),title:z.string().trim().min(1).max(127),description:z.string().max(4000),annual:z.boolean(),approved:z.literal(true),plans:z.array(z.object({name:z.string().trim().min(1).max(30),price:z.number().finite().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(30)})).length(3)});
+const schema=z.object({billing:z.literal("subscription").optional().default("subscription"),storeId:z.string().uuid().optional(),requestId:z.string().uuid(),title:z.string().trim().min(1).max(127),description:z.string().max(4000),annual:z.boolean(),approved:z.literal(true),plans:z.array(z.object({name:z.string().trim().min(1).max(30),price:z.number().finite().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(30)})).min(1).max(3)});
 // Server-side owner authorization protects this shared sandbox merchant.
 export async function GET(request:Request){const denied=await authGuard();if(denied)return denied;try{await billingToken(new URL(request.url).searchParams.get("store")??undefined);return Response.json({connected:true,environment:"sandbox",merchant:"Selected sandbox business account"},{headers:{"Cache-Control":"no-store"}});}catch(e){return storeError(e);}}
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});
  if(Number(request.headers.get("content-length")??0)>25000)return Response.json({error:"Request is too large."},{status:413});
- let input;try{const text=await request.text();if(text.length>25000)throw new Error();input=schema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide three valid tiers and explicitly approve the prices."},{status:400});}
+ let input;try{const text=await request.text();if(text.length>25000)throw new Error();input=schema.parse(JSON.parse(text));}catch{return Response.json({error:"Provide valid recurring offers and explicitly approve the prices."},{status:400});}
  const results:{id:string;name:string;amount:string;status:string}[]=[];let productId="";
  try{
  const token=await billingToken(input.storeId);

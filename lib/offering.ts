@@ -1,0 +1,6 @@
+import {z} from "zod";
+export const offeringSchema=z.object({kind:z.enum(["software","service","digital_product","physical_product","other"]),billing:z.enum(["subscription","one_time","package","unspecified"]),structure:z.enum(["tiered","independent"]),priceUnit:z.string().trim().min(1).max(40),audiences:z.array(z.string().max(120)).max(3),showParticipants:z.boolean(),showUsage:z.boolean()});
+export type Offering=z.infer<typeof offeringSchema>;
+export const defaultOffering:Offering={kind:"software",billing:"subscription",structure:"tiered",priceUnit:"month",audiences:[],showParticipants:true,showUsage:true};
+export const offeringJson={type:"object",additionalProperties:false,properties:{kind:{type:"string",enum:["software","service","digital_product","physical_product","other"]},billing:{type:"string",enum:["subscription","one_time","package","unspecified"]},structure:{type:"string",enum:["tiered","independent"]},priceUnit:{type:"string"},audiences:{type:"array",items:{type:"string"}},showParticipants:{type:"boolean"},showUsage:{type:"boolean"}},required:["kind","billing","structure","priceUnit","audiences","showParticipants","showUsage"]};
+export function cleanUnit(unit:string){return unit.replace(/\s*(?:\/\s*month|per month|monthly)\s*/gi," ").replace(/\s+/g," ").trim()||"included actions";}

@@ -4,7 +4,7 @@ import {accessToken,paypal} from "@/lib/paypal";
 import {db,limited,publicUrl,publicEndpoint,SITE,failure,type Config} from "@/lib/checkout-store";
 import {z} from "zod";
 export const dynamic="force-dynamic";
-const schema=z.object({storeId:z.string().uuid().optional(),title:z.string().min(1).max(127),unit:z.string().max(50),annual:z.boolean(),website:z.string().max(2000),success:z.string().max(2000),cancel:z.string().max(2000),webhook:z.string().max(2000),plans:z.array(z.object({name:z.string().min(1).max(30),price:z.number().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(12),planId:z.string().regex(/^P-[A-Z0-9]{10,40}$/)})).length(3)});
+const schema=z.object({storeId:z.string().uuid().optional(),title:z.string().min(1).max(127),unit:z.string().max(50),annual:z.boolean(),website:z.string().max(2000),success:z.string().max(2000),cancel:z.string().max(2000),webhook:z.string().max(2000),plans:z.array(z.object({name:z.string().min(1).max(30),price:z.number().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(12),planId:z.string().regex(/^P-[A-Z0-9]{10,40}$/)})).min(1).max(3)});
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==SITE)return Response.json({error:"Request origin is not allowed."},{status:403});
@@ -21,6 +21,6 @@ export async function POST(request:Request){
  const id=crypto.randomUUID(),secret=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join("");const config:Config={...input,website,plans};
  await db().prepare("INSERT INTO projects (id,owner,config,secret,created) VALUES (?,?,?,?,?)").bind(id,user.userId,JSON.stringify(config),secret,Date.now()).run();
  return Response.json({id,embedUrl:SITE+"/embed/"+id,backendUrl:SITE+"/api/embed/"+id,signingSecret:secret},{headers:{"Cache-Control":"no-store"}});
- }catch(e){if(e instanceof z.ZodError)return Response.json({error:"Complete the URLs and create three valid PayPal plans."},{status:400});return failure(e);}
+ }catch(e){if(e instanceof z.ZodError)return Response.json({error:"Complete the URLs and create valid PayPal plans."},{status:400});return failure(e);}
 }
 export async function GET(){const denied=await authGuard();if(denied)return denied;try{const owner=(await firebaseUser())!;const data=await db().prepare("SELECT id,config,created FROM projects WHERE owner=? ORDER BY created DESC LIMIT 20").bind(owner.userId).all();return Response.json({projects:data.results},{headers:{"Cache-Control":"no-store"}});}catch(e){return failure(e);}}

@@ -2,7 +2,7 @@ import {env} from "cloudflare:workers";
 export function db(){const database=(env as unknown as {DB?:D1Database}).DB;if(!database)throw new Error("Checkout storage is unavailable.");return database;}
 export async function limited(key:string,max:number){const row=await db().prepare("INSERT INTO limits (key,count) VALUES (?,1) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count").bind(key).first<{count:number}>();return !row||row.count>max;}
 export type PublishedPlan={key:string;name:string;price:number;seats:number;units:number;features:string[];planId:string;amount:string};
-export type Config={billing?:"one_time";priceUnit?:string;showParticipants?:boolean;showUsage?:boolean;bookingUrl?:string;title:string;unit:string;annual:boolean;website:string;success:string;cancel:string;webhook:string;plans:PublishedPlan[];storeId?:string};
+export type Config={pricingOnly?:boolean;billing?:"one_time";priceUnit?:string;showParticipants?:boolean;showUsage?:boolean;bookingUrl?:string;title:string;unit:string;annual:boolean;website:string;success:string;cancel:string;webhook:string;plans:PublishedPlan[];storeId?:string};
 export type Project={id:string;owner:string;config:string;secret:string;created:number};
 export type Session={id:string;project:string;plan:string;reference:string;subscription:string|null;status:string;created:number};
 export async function project(id:string){if(!/^[a-f0-9-]{36}$/.test(id))return null;return db().prepare("SELECT * FROM projects WHERE id=?").bind(id).first<Project>();}

@@ -5,7 +5,7 @@
   if(!element)throw new Error("Pricing container not found.");
   const base=new URL(options.backendUrl);
   if(!["https:","http:"].includes(base.protocol))throw new Error("Invalid backend URL.");
-  const response=await fetch(new URL(base.href.replace(/\/$/,"")+"/pricing"));
+  const response=await fetch(new URL(base.href.replace(/\/$/,"")+"/pricing"),{cache:"no-store"});
   if(!response.ok)throw new Error("Could not load pricing.");
   const config=await response.json();
   const root=element.shadowRoot||element.attachShadow({mode:"open"});root.replaceChildren();

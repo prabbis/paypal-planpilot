@@ -1,5 +1,6 @@
-import {env} from "cloudflare:workers";
-export function db(){const database=(env as unknown as {DB?:D1Database}).DB;if(!database)throw new Error("Checkout storage is unavailable.");return database;}
+import {firebaseDatabase} from "./firebase-data";
+import {env} from "@/lib/runtime-env";
+export function db(){if((env as Record<string,unknown>).DATA_BACKEND==="firebase")return firebaseDatabase() as unknown as D1Database;const database=(env as unknown as {DB?:D1Database}).DB;if(!database)throw new Error("Checkout storage is unavailable.");return database;}
 export async function limited(key:string,max:number){const row=await db().prepare("INSERT INTO limits (key,count) VALUES (?,1) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count").bind(key).first<{count:number}>();return !row||row.count>max;}
 export type PublishedPlan={key:string;name:string;price:number;seats:number;units:number;features:string[];planId:string;amount:string};
 export type Config={pricingOnly?:boolean;billing?:"one_time";priceUnit?:string;showParticipants?:boolean;showUsage?:boolean;bookingUrl?:string;title:string;unit:string;annual:boolean;website:string;success:string;cancel:string;webhook:string;plans:PublishedPlan[];storeId?:string};
@@ -13,5 +14,5 @@ export async function publicEndpoint(value:string){const u=publicUrl(value);let 
  if(!resolved)throw new Error("Webhook hostname could not be resolved.");
  return u;
 }
-export const SITE="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
+export const SITE=new URL(String((env as Record<string,unknown>).PUBLIC_SITE_URL||(env as Record<string,unknown>).RENDER_EXTERNAL_URL||"https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site")).origin;
 export function failure(error:unknown){console.error("Checkout request failed",error instanceof Error?error.message:"unknown");return Response.json({error:"Checkout could not complete. Check your configuration and retry."},{status:503,headers:{"Cache-Control":"no-store"}});}

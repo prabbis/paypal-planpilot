@@ -1,4 +1,4 @@
-import {env} from "cloudflare:workers";
+import {env} from "@/lib/runtime-env";
 import {firebaseUser} from "./firebase-auth";
 export async function merchantUser(){
  const user=await firebaseUser();

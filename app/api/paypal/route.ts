@@ -1,3 +1,4 @@
+import {SITE} from "@/lib/checkout-store";
 import {demoPaymentLimit,rememberDemoResource} from "@/lib/demo-session";
 import {authGuard,firebaseUser} from "@/lib/firebase-auth";
 import {billingToken} from "@/lib/billing-auth";
@@ -5,7 +6,7 @@ import {storeError} from "@/lib/stores";
 import { accessToken, paypal, routeError } from "@/lib/paypal";
 import { z } from "zod";
 export const dynamic="force-dynamic";
-const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
+const ORIGIN=SITE;
 const schema=z.object({billing:z.literal("subscription").optional().default("subscription"),storeId:z.string().uuid().optional(),requestId:z.string().uuid(),title:z.string().trim().min(1).max(127),description:z.string().max(4000),annual:z.boolean(),approved:z.literal(true),plans:z.array(z.object({name:z.string().trim().min(1).max(30),price:z.number().finite().min(1).max(100000),seats:z.number().int().min(1).max(10000),units:z.number().int().min(1).max(1000000),features:z.array(z.string().max(200)).max(30)})).min(1).max(3)});
 // Server-side owner authorization protects this shared sandbox merchant.
 export async function GET(request:Request){const denied=await authGuard();if(denied)return denied;try{await billingToken(new URL(request.url).searchParams.get("store")??undefined);return Response.json({connected:true,environment:"sandbox",merchant:"Selected sandbox business account"},{headers:{"Cache-Control":"no-store"}});}catch(e){return storeError(e);}}

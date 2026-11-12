@@ -1,6 +1,7 @@
+import {firebaseBucket} from "./firebase-storage";
 import {paypalCredentialErrors} from "./paypal-credentials";
 import {z} from "zod";
-import {env} from "cloudflare:workers";
+import {env} from "@/lib/runtime-env";
 import {db,SITE} from "./checkout-store";
 import {firebaseUser} from "./firebase-auth";
 export const slugSchema=z.string().regex(/^[a-z0-9][a-z0-9-]{2,39}$/).refine(s=>!new Set(["api","login","stores","dashboard","integrations","embed","checkout","callback","signin-with-chatgpt","signout-with-chatgpt","favicon","admin","account","settings"]).has(s),"Choose another store path.");
@@ -20,7 +21,7 @@ export function validationMessage(e:z.ZodError){const issue=e.issues[0];if(!issu
 export function storeError(e:unknown){if(e instanceof StoreError)return Response.json({error:e.message},{status:e.status,headers:{"Cache-Control":"no-store"}});if(e instanceof z.ZodError)return Response.json({error:validationMessage(e)},{status:400});console.error("Store operation failed",e instanceof Error?e.message:"unknown");return Response.json({error:"This store request could not complete. Please retry."},{status:503});}
 export function sameOrigin(request:Request){if(request.headers.get("origin")!==SITE)throw new StoreError("Request origin is not allowed.",403);}
 export function publicConfig(c:StoreConfig){return {...c,products:c.products.filter(p=>p.enabled).map(({fileKey,fileName,...p})=>({...p,available:p.price>0&&(p.type!=="digital"||!!fileKey)}))};}
-export function bucket(){const b=(env as unknown as {BUCKET?:R2Bucket}).BUCKET;if(!b)throw new StoreError("File storage is temporarily unavailable.",503);return b;}
+export function bucket(){if((env as Record<string,unknown>).DATA_BACKEND==="firebase")return firebaseBucket as unknown as R2Bucket;const b=(env as unknown as {BUCKET?:R2Bucket}).BUCKET;if(!b)throw new StoreError("File storage is temporarily unavailable.",503);return b;}
 async function key(){const value=(env as unknown as Record<string,string>).STORE_CREDENTIAL_KEY;if(!value)throw new StoreError("Merchant credential storage is unavailable.",503);return crypto.subtle.importKey("raw",Uint8Array.from(atob(value),c=>c.charCodeAt(0)),"AES-GCM",false,["encrypt","decrypt"]);}
 export async function sealCredentials(store:string,value:unknown){const iv=crypto.getRandomValues(new Uint8Array(12));const ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:new TextEncoder().encode(store)},await key(),new TextEncoder().encode(JSON.stringify(value)));return JSON.stringify({iv:btoa(String.fromCharCode(...iv)),data:btoa(String.fromCharCode(...new Uint8Array(ciphertext)))});}
 export async function credentialValues(store:StoreRow){if(!store.credentials)throw new StoreError("This store hasn’t connected PayPal yet.",409);const encrypted=JSON.parse(store.credentials) as {iv:string;data:string};const raw=await crypto.subtle.decrypt({name:"AES-GCM",iv:Uint8Array.from(atob(encrypted.iv),c=>c.charCodeAt(0)),additionalData:new TextEncoder().encode(store.id)},await key(),Uint8Array.from(atob(encrypted.data),c=>c.charCodeAt(0)));return JSON.parse(new TextDecoder().decode(raw)) as {clientId:string;clientSecret:string;webhookId?:string};}

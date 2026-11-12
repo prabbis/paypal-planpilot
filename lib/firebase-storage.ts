@@ -1,0 +1,7 @@
+import {env} from "@/lib/runtime-env";
+import {googleRequest} from "./firebase-server";
+function bucketName(){const value=(env as Record<string,string>).FIREBASE_STORAGE_BUCKET;if(!value||!/^[a-z0-9][a-z0-9._-]+$/.test(value))throw new Error("Firebase Storage bucket is not configured.");return value;}
+export const firebaseBucket={
+ async put(key:string,value:ReadableStream|ArrayBuffer|ArrayBufferView|string,options?:{httpMetadata?:{contentType?:string}}){const body=value instanceof ReadableStream?await new Response(value).arrayBuffer():ArrayBuffer.isView(value)?new Uint8Array(value.buffer,value.byteOffset,value.byteLength):value;const response=await googleRequest("https://storage.googleapis.com/upload/storage/v1/b/"+encodeURIComponent(bucketName())+"/o?uploadType=media&name="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":options?.httpMetadata?.contentType??"application/octet-stream"},body:body as BodyInit});if(!response.ok)throw new Error("Firebase Storage upload failed.");return response.json();},
+ async get(key:string){const response=await googleRequest("https://storage.googleapis.com/download/storage/v1/b/"+encodeURIComponent(bucketName())+"/o/"+encodeURIComponent(key)+"?alt=media");if(response.status===404)return null;if(!response.ok)throw new Error("Firebase Storage download failed.");return {body:response.body,httpMetadata:{contentType:response.headers.get("content-type")??"application/octet-stream"}};}
+};

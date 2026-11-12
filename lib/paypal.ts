@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env } from "@/lib/runtime-env";
 // Sandbox only. Never select the API host from a browser input or credential.
 const API="https://api-m.sandbox.paypal.com";
 const secrets=()=>env as unknown as Record<string,string|undefined>;

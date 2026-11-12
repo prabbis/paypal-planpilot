@@ -1,13 +1,14 @@
+import {SITE} from "@/lib/checkout-store";
 import {demoVisitorKey} from "@/lib/demo-session";
 import {marketJson,checkedMarket,marketText} from "@/lib/market-references";
 import {authGuard,firebaseUser} from "@/lib/firebase-auth";
 import {limited} from "@/lib/checkout-store";
-import {env} from "cloudflare:workers";
+import {env} from "@/lib/runtime-env";
 import {z} from "zod";
 import {PricingBudgetError} from "@/lib/pricing-economics";
 import {inputSchema,outputSchema,parsePricingOutput,serviceClarification} from "@/lib/pricing-contract";
 export const dynamic="force-dynamic";
-const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
+const ORIGIN=SITE;
 // Verified accounts and isolated, rate-limited demo sessions protect the shared AI key.
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;

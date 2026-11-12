@@ -1,10 +1,11 @@
+import {SITE} from "@/lib/checkout-store";
 import {demoPaymentLimit,rememberDemoResource,requireDemoResource} from "@/lib/demo-session";
 import {authGuard,firebaseUser} from "@/lib/firebase-auth";
 import {billingToken} from "@/lib/billing-auth";
 import {accessToken,paypal,routeError} from "@/lib/paypal";
 import {z} from "zod";
 export const dynamic="force-dynamic";
-const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
+const ORIGIN=SITE;
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});

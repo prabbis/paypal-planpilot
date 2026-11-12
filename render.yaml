@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: planpilot
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build:render
+    startCommand: pnpm exec next start -H 0.0.0.0 -p $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: DATA_BACKEND
+        value: firebase
+      - key: FIRESTORE_COLLECTION_PREFIX
+        value: planpilot_
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: FIREBASE_APIKEY
+        sync: false
+      - key: FIREBASE_AUTHDOMAIN
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_APPID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: STORE_CREDENTIAL_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_OWNER_EMAIL
+        sync: false

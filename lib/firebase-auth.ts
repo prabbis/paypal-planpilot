@@ -1,4 +1,4 @@
-import {env} from "cloudflare:workers";
+import {env} from "@/lib/runtime-env";
 import {readDemoSession,SESSION_COOKIE} from "./demo-session";
 import {cookies} from "next/headers";
 export type FirebaseUser={userId:string;email:string;displayName:string;isDemo?:boolean};

@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+import assert from 'node:assert/strict';
+const exports={};
+const code=ts.transpileModule(fs.readFileSync('lib/firebase-data.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+vm.runInNewContext(code,{exports,require:()=>({env:{}}),URL,TextEncoder,Uint8Array,btoa,console:{error(){}},setTimeout});
+const {FirestoreDriver}=exports;
+let sent;
+const driver=new FirestoreDriver('example','planpilot_',async(_url,options)=>{sent=JSON.parse(options.body);return Response.json([{document:{fields:{id:{stringValue:'older'},updated:{integerValue:'1'}}}},{document:{fields:{id:{stringValue:'newer'},updated:{integerValue:'9'}}}}]);});
+const rows=await driver.read(tx=>tx.query('pricing_chats',[{field:'owner',op:'=',value:'owner-id'}],[{field:'updated',desc:true}],1));
+assert.equal(rows.length,1);assert.equal(rows[0].id,'newer');assert.equal(sent.structuredQuery.orderBy,undefined);assert.equal(sent.structuredQuery.limit,undefined);assert.equal(sent.structuredQuery.where.fieldFilter.value.stringValue,'owner-id');
+const rejected=new FirestoreDriver('example','planpilot_',async()=>Response.json([{error:{status:'FAILED_PRECONDITION',message:'The query requires an index'}}],{status:400}));
+await assert.rejects(()=>rejected.read(tx=>tx.query('pricing_chats',[],[],1)),/FAILED_PRECONDITION.*Deploy the Firestore indexes/);
+console.log('Passed: owner-scoped sorting before limit and streamed Firestore error decoding.');

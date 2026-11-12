@@ -1,3 +1,4 @@
+import {demoVisitorKey} from "@/lib/demo-session";
 import {marketJson,checkedMarket,marketText} from "@/lib/market-references";
 import {authGuard,firebaseUser} from "@/lib/firebase-auth";
 import {limited} from "@/lib/checkout-store";
@@ -7,7 +8,7 @@ import {PricingBudgetError} from "@/lib/pricing-economics";
 import {inputSchema,outputSchema,parsePricingOutput,serviceClarification} from "@/lib/pricing-contract";
 export const dynamic="force-dynamic";
 const ORIGIN="https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site";
-// The owner login protects the shared AI key.
+// Verified accounts and isolated, rate-limited demo sessions protect the shared AI key.
 export async function POST(request:Request){
  const denied=await authGuard();if(denied)return denied;
  if(request.headers.get("origin")!==ORIGIN)return Response.json({error:"Request origin is not allowed."},{status:403});
@@ -21,7 +22,7 @@ export async function POST(request:Request){
  const config=env as unknown as Record<string,string|undefined>;
  const key=config.OPENAI_API_KEY??config.OPENAPI_KEY;
  if(!key)return Response.json({error:"An OpenAI API key is not configured."},{status:503});
- try{const user=(await firebaseUser())!;const day=new Date().toISOString().slice(0,10);if(await limited("ai:"+user.userId+":"+day,50))return Response.json({error:"You’ve reached today’s 50-request demo allowance."},{status:429});if(await limited("ai-global:"+day,100))return Response.json({error:"Today’s shared demo AI allowance has been used. Please try again after the daily reset."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
+ try{const user=(await firebaseUser())!;const day=new Date().toISOString().slice(0,10);if(user.isDemo&&await limited("demo-ai-visitor:"+await demoVisitorKey(request)+":"+day,20))return Response.json({error:"You’ve reached this browser network’s demo allowance for today. Sign in to continue in your own workspace."},{status:429});if(await limited("ai:"+user.userId+":"+day,user.isDemo?10:50))return Response.json({error:user.isDemo?"You’ve used today’s 10 AI requests in this demo. Sign in to continue in your own workspace.":"You’ve reached today’s 50-request allowance."},{status:429});if(await limited("ai-global:"+day,100))return Response.json({error:"Today’s shared demo AI allowance has been used. Please try again after the daily reset."},{status:429});}catch{return Response.json({error:"Pricing storage is temporarily unavailable. Please retry."},{status:503});}
  let stage="website research";
  try{
  let marketSummary="";let websiteResearch="";let sources:{url:string;title:string}[]=[];

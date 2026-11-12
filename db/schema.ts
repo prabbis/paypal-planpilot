@@ -9,3 +9,7 @@ export const storeOrders=sqliteTable("store_orders",{id:text("id").primaryKey(),
 export const storeCustomers=sqliteTable("store_customers",{id:text("id").primaryKey(),store:text("store").notNull(),user:text("user").notNull(),created:integer("created").notNull()},t=>[uniqueIndex("idx_store_customer_membership").on(t.store,t.user)]);
 export const pricingChats=sqliteTable("pricing_chats",{id:text("id").primaryKey(),owner:text("owner").notNull(),title:text("title").notNull(),snapshot:text("snapshot").notNull(),revision:integer("revision").notNull().default(1),created:integer("created").notNull(),updated:integer("updated").notNull()},t=>[index("idx_pricing_chats_owner_updated").on(t.owner,t.updated)]);
 export const offerOrders=sqliteTable("offer_orders",{id:text("id").primaryKey(),project:text("project").notNull(),plan:text("plan").notNull(),paypal:text("paypal").unique(),capture:text("capture").unique(),status:text("status").notNull(),receipt:text("receipt").notNull().unique(),created:integer("created").notNull()},t=>[index("idx_offer_orders_project").on(t.project)]);
+
+export const demoSessions=sqliteTable("demo_sessions",{tokenHash:text("token_hash").primaryKey(),owner:text("owner").notNull().unique(),expires:integer("expires").notNull(),created:integer("created").notNull()},t=>[index("idx_demo_sessions_expires").on(t.expires)]);
+
+export const demoPayPalResources=sqliteTable("demo_paypal_resources",{id:text("id").primaryKey(),owner:text("owner").notNull(),kind:text("kind").notNull()},t=>[index("idx_demo_paypal_resources_owner").on(t.owner)]);

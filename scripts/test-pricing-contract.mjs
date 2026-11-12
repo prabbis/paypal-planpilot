@@ -30,6 +30,9 @@ const pack=parsePricingOutput({...raw,offering:{...service,billing:'package',pri
 const softwareWorkload={...workload,labourRate:0,labourMinutesPerUnit:0,participantCost:.5};
 const softwareInput={...input,offering:defaultOffering,workload:softwareWorkload};
 const software=parsePricingOutput({...raw,offering:defaultOffering,workload:softwareWorkload,featureRows:[{label:'Connected social accounts',limits:[2,5,15]}],plans:[0,1,2].map(i=>({...raw.plans[0],name:['Starter','Team','Business'][i],units:100*(i+1)}))},softwareInput);
+const zeroDurationSoftware=parsePricingOutput({...raw,offering:defaultOffering,workload:softwareWorkload,featureRows:[],plans:[{...raw.plans[0],delivery:{...raw.plans[0].delivery,durationMinutes:0}}]},softwareInput);
+assert.equal(zeroDurationSoftware.plans[0].delivery,null);
+assert.throws(()=>parsePricingOutput({...raw,plans:[{...raw.plans[0],delivery:{...raw.plans[0].delivery,durationMinutes:0}}]},input));
 assert.deepEqual(software.plans.map(p=>p.features[0]),['Post to 2 social accounts','Post to 5 social accounts','Post to 15 social accounts']);
 for(const p of software.plans)for(const annual of [false,true])assert(economics(p,assumptions,softwareWorkload,annual).margin>=65);
 const snapshot={messages:[{role:'user',text:'Price my appointments'}],model:{title:'Coaching',unit:'minutes',component:'Time',features:[],unitCost:0},plans:result.plans,description:'Coaching',input:'',website:'',websiteMode:'suggest',workload,assessment:result.assessment,...assumptions,annual:false,aiDraft:true,reasoning:'Costs',tab:'plans',billingStore:'',created:false,remotePlans:[],requestKey:null};

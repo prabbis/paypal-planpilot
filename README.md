@@ -8,14 +8,20 @@ PlanPilot helps businesses turn an app, professional service, appointment or pro
 
 `render.yaml` enables automatic deployment on commits. `.github/workflows/checks.yml` runs application checks and a Node production build. You can change Render’s trigger to `checksPass` if deployments should wait for GitHub checks instead of starting on every push.
 
-This project has two supported runtime targets:
+## Architecture
 
-| Target | Authentication | Application records | Uploaded files |
-| --- | --- | --- | --- |
-| Render / Node (`DATA_BACKEND=firebase`) | Firebase Authentication | Cloud Firestore | Firebase Storage |
-| Existing Sites deployment | Firebase Authentication | Cloudflare D1 | Cloudflare R2 |
+PlanPilot runs as a Next.js Node application on Render, with Firebase handling authentication, application data and file storage.
 
-The existing Sites deployment continues to use its current data. Selecting Firebase for a Render deployment does **not** automatically copy existing D1 records or R2 files. See **Existing data** below.
+| Component | Service |
+| --- | --- |
+| Application hosting | Render |
+| Sign-in | Firebase Authentication |
+| Application records | Cloud Firestore |
+| Uploaded files | Firebase Storage |
+| AI pricing assistant | OpenAI |
+| Test payments | PayPal Sandbox |
+
+Set `DATA_BACKEND=firebase` as provided in `render.yaml`. Follow the Firebase and Render setup steps below to deploy your own instance.
 
 ## Features
 
@@ -59,7 +65,7 @@ pnpm run build:render
 pnpm exec next start -H 0.0.0.0 -p 3000
 ```
 
-The original Sites build commands (`dev`, `build`, `start`) retain their Cloudflare runtime configuration. Use the `:render` commands on Node/Render.
+Use the `:render` scripts shown above for local development and deployment.
 
 ## Firebase setup
 
@@ -88,7 +94,7 @@ Application records live in separate Firestore collections, including projects, 
 
 | Variable | Purpose |
 | --- | --- |
-| `DATA_BACKEND` | `firebase` on Render. Omit on the existing Sites deployment to retain D1/R2. |
+| `DATA_BACKEND` | Set to `firebase` for local development and Render. |
 | `PUBLIC_SITE_URL` | Optional canonical HTTPS origin. On Render, the automatically supplied `RENDER_EXTERNAL_URL` is used if this is absent. Set this for a custom domain. |
 | `FIREBASE_APIKEY` | Firebase web-app API key. Public client configuration, not an administrator credential. |
 | `FIREBASE_AUTHDOMAIN` | Firebase Authentication domain. |
@@ -125,7 +131,7 @@ Do not rotate this key without migrating/reconnecting existing encrypted credent
 
 The Blueprint uses a free Node web service and external Firebase persistence. Render’s free-service spin-down/build limits still apply. No database or user upload depends on Render’s ephemeral local filesystem.
 
-A manual Render deploy hook or a GitHub Actions deployment secret is not required: Render’s Git integration handles deployment. Render only deploys code that has actually been pushed to the linked repository and branch; publishing a Sites version alone does not push to GitHub.
+A manual Render deploy hook or a GitHub Actions deployment secret is not required: Render’s Git integration handles deployment. Render deploys code pushed to the linked GitHub repository and branch.
 
 ## PayPal setup and checkout
 
@@ -144,9 +150,11 @@ No custom webhook or redirect is required for the hosted test flow. PlanPilot su
 
 Published subscription pages can be upgraded to checkout on the same URL when the draft still matches the published offers. Cancellation returns to the hosted pricing page or cards view according to where checkout began, while preserving explicit custom cancellation URLs.
 
-## Existing data and migration
+## Migrating an earlier Cloudflare deployment
 
-A fresh Firebase deployment starts with empty collections. Existing D1/R2 data is not deleted or copied by deploying this repository.
+This section applies only if you are moving an existing Cloudflare deployment to Render. New installations can skip it.
+
+A fresh Firebase deployment starts with empty collections. Deploying this repository does not import or delete records from an earlier deployment.
 
 Before switching a production hostname:
 

@@ -85,3 +85,7 @@ Tests cover pricing rules, guest and owner isolation, saved connections, publish
 ## Current scope
 
 PayPal integration is **sandbox-only**. Live merchant onboarding and automatic fulfilment/access in a customer's application are not implemented. Service prices and delivery costs are estimates for merchant review.
+
+## Licence
+
+[MIT](LICENSE) · Copyright © 2026 Abisola. Third-party components retain their respective licences.

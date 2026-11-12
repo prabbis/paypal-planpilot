@@ -19,7 +19,7 @@
    for(const feature of [...(config.showParticipants?[plan.seats+" "+(config.billing==="one_time"?"participants":"included users")]:[]),...(config.showUsage?[plan.units+" "+config.unit+(config.billing==="one_time"?" included":" / month")]:[]),...plan.features]){const li=document.createElement("li");li.textContent=feature;list.append(li);}
    status.className="status";status.setAttribute("role","status");button.textContent=config.billing==="one_time"?"Pay once · PayPal sandbox":"Subscribe · PayPal sandbox";
    button.onclick=async()=>{button.disabled=true;status.textContent="Preparing secure PayPal checkout…";try{
-    const r=await fetch(new URL(base.href.replace(/\/$/,"")+"/checkout"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({planKey:plan.key})});
+    const r=await fetch(new URL(base.href.replace(/\/$/,"")+"/checkout"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({planKey:plan.key,returnView:options.returnView==="hosted"?"hosted":"embed"})});
     const data=await r.json();if(!r.ok)throw new Error(data.error||"Checkout failed.");
     const approval=new URL(data.approvalUrl);if(approval.hostname!=="www.sandbox.paypal.com"||approval.protocol!=="https:")throw new Error("Unexpected checkout destination.");
     if(global.top===global){global.location.assign(approval.href);}else{const link=document.createElement("a");link.href=approval.href;link.target="_top";link.textContent="Continue to PayPal";button.replaceWith(link);status.textContent="Continue to PayPal to approve this sandbox checkout.";}

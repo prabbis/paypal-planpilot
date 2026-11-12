@@ -115,22 +115,6 @@ No custom webhook or redirect is required for the hosted test flow. PlanPilot su
 
 Published subscription pages can be upgraded to checkout on the same URL when the draft still matches the published offers. Cancellation returns to the hosted pricing page or cards view according to where checkout began, while preserving explicit custom cancellation URLs.
 
-## Migrating an earlier Cloudflare deployment
-
-This section applies only if you are moving an existing Cloudflare deployment to Render. New installations can skip it.
-
-A fresh Firebase deployment starts with empty collections. Deploying this repository does not import or delete records from an earlier deployment.
-
-Before switching a production hostname:
-
-1. Back up D1 records using authorised exports.
-2. Import records into the prefixed Firestore collections with their existing UUIDs; rebuild uniqueness records through the document repository layer.
-3. Keep the same credential-encryption key if encrypted PayPal connection records are migrated.
-4. Reconnect/verify merchant apps on the new host so the appropriate PlanPilot webhook endpoints are registered there. Existing PayPal approval links retain the return URLs set when they were created; test a newly created checkout on the new deployment.
-5. Validate owner isolation, receipts, saved conversations and webhook processing before directing traffic to the new deployment.
-
-This repository does not silently migrate live payment data or reuse a service account from another environment.
-
 ## Checks
 
 ```bash

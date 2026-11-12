@@ -59,7 +59,9 @@ pnpm exec next start -H 0.0.0.0 -p 3000
 
 ## Deploy to Render
 
-The repository includes `render.yaml`; you do not need to enter build and start commands manually.
+Render runs PlanPilot’s Next.js application as a Node web service. It serves the pricing workspace, public pricing pages, embeds and server API routes—including PayPal checkout returns and webhooks. Firebase Authentication and Firestore remain the identity and data services.
+
+The repository includes `render.yaml`, which defines the build command, server start command, environment-variable prompts, `/api/health` check and automatic deployment from GitHub. You do not need to enter build and start commands manually.
 
 1. Fork this repository, or push the source to your own GitHub repository.
 2. In [Render](https://dashboard.render.com/), select **New → Blueprint**, connect GitHub and choose your repository's **main** branch. Use `render.yaml`.
@@ -70,7 +72,7 @@ The repository includes `render.yaml`; you do not need to enter build and start 
 
 **Future updates:** commit and push to GitHub's `main` branch. Render automatically builds and deploys the new version.
 
-Render uses Firebase Authentication and Firestore. **Firebase Storage is not required.** A new Firebase deployment starts empty; it does not import the hosted demo's existing data. See the [configuration guide](docs/setup.md) for provider setup and migration details.
+Render uses Firebase Authentication and Firestore. **Firebase Storage is not required.** A new Firebase deployment starts empty; it does not import the hosted demo's existing data. See the [configuration guide](docs/setup.md) for provider setup details.
 
 ## Checks
 

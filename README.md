@@ -1,170 +1,76 @@
 # PlanPilot
 
-PlanPilot helps businesses turn an app, professional service, appointment or programme into clear pricing. Describe an offer, answer the assistant’s questions, review the costs and publish a complete pricing page or a cards-only embed. PayPal sandbox checkout can be included in the same publishing flow.
+**Turn an idea into clear pricing—and a page customers can pay through.**
 
-## Deployment flow
+Founders and service providers often struggle to decide what to charge, what each offer includes and how to start accepting payments. PlanPilot brings those steps into one workspace: describe your offer, refine an AI pricing draft, then publish with optional PayPal sandbox checkout.
 
-**Commit and push to GitHub → Render builds the linked `main` branch → the new version is deployed.**
+Built for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com/) by **Abisola, with help from Codex**.
 
-`render.yaml` enables automatic deployment on commits. `.github/workflows/checks.yml` runs application checks and a Node production build. You can change Render’s trigger to `checksPass` if deployments should wait for GitHub checks instead of starting on every push.
+[Try the hosted demo](https://planpilot-prabbis-demo.abisolaadeniran.chatgpt.site) · [Run locally](#run-locally) · [Deploy to Render](#deploy-to-render) · [Configuration guide](docs/setup.md)
 
-## Architecture
+## Try it
 
-PlanPilot runs as a Next.js Node application on Render, with Firebase handling authentication and application data.
+1. Open the demo and choose **Try the demo — no sign-in**.
+2. Describe an app, service or programme. Answer any clarifying questions.
+3. Review the suggested offers. Edit prices, inclusions and usage limits in **Edit table**, or ask the assistant for changes.
+4. Open **Share pricing → Publish pricing**. Choose a pricing page alone or include **PayPal checkout**.
+5. For checkout, follow the connection and plan-approval steps, open the published page and pay with a **PayPal sandbox personal account**.
 
-| Component | Service |
+You receive a hosted pricing-page link and a cards-only iframe embed. Guest workspaces expire after 24 hours; sign in to keep your work. **All payments are sandbox tests; no live money is charged.**
+
+## How PayPal and AI work together
+
+| Tool | Role in PlanPilot |
 | --- | --- |
-| Application hosting | Render |
-| Sign-in | Firebase Authentication |
-| Application records | Cloud Firestore |
-| AI pricing assistant | OpenAI |
-| Test payments | PayPal Sandbox |
+| OpenAI | Asks clarifying questions, proposes an appropriate payment structure and estimates prices, delivery costs and usage guardrails. Estimates and margin assumptions remain editable. |
+| PayPal | Creates sandbox subscription plans for recurring offers, handles one-time checkout through Orders v2, and supplies payment status verified by the server and webhooks. |
+| AG Grid Community | Powers the editable pricing table so users can refine AI suggestions directly. No AG Grid licence key is required. |
+| Firebase | Provides sign-in and, on the Render deployment, Firestore persistence for conversations, pricing and payment records. |
+| Render | Hosts the Node application and automatically deploys updates pushed to GitHub. |
 
-PlanPilot’s pricing workspace does not upload or deliver files, so Firebase Storage and bucket credentials are not required.
+AI suggests the pricing; the merchant reviews it and approves payment setup. Customers can check out without a PlanPilot account. PlanPilot handles hosted return/cancel URLs and payment notifications.
 
-Set `DATA_BACKEND=firebase` as provided in `render.yaml`. Follow the Firebase and Render setup steps below to deploy your own instance.
+## Run locally
 
-## Features
-
-- AI pricing for subscription apps, one-time appointments, independent offers and programmes.
-- Clarifying questions before generating offers when important details are missing.
-- Editable prices, features, usage allowances, delivery costs and contribution-margin assumptions.
-- Private saved conversations, each identified by a UUID.
-- Isolated 24-hour guest demos with a sidebar Sandbox demo switch.
-- One publishing dialog: pricing only, or pricing with PayPal sandbox checkout.
-- Hosted pricing pages at `/pricing/:id`; cards-only embeds at `/embed/:id`.
-- Customer checkout without a PlanPilot login.
-- Owner-scoped PayPal connections with encrypted server-side credentials, friendly names and reversible archiving.
-- Server-verified PayPal subscription returns, one-time captures and payment notifications.
-
-**Sandbox only:** live PayPal merchant onboarding and live payments are not implemented. A completed sandbox checkout does not automatically provision access in another application.
-
-## Requirements
-
-- Node.js 24 and Corepack/pnpm (the package manager version is pinned in `package.json`).
-- A Firebase project with Authentication and a Firestore database in Native mode.
-- A server service account for that Firebase project.
-- An OpenAI API key to generate pricing; without it, examples and editing remain available.
-- PayPal sandbox app credentials to test checkout.
-
-## Local development for Render
+**You need:** Node.js 24, Corepack/pnpm, a Firebase project, an OpenAI API key and PayPal sandbox app credentials for payment testing.
 
 ```bash
+git clone https://github.com/prabbis/paypal-planpilot.git
+cd paypal-planpilot
 corepack enable
 pnpm install --frozen-lockfile
 cp .env.example .env.local
-# Fill in your local environment variables. Do not commit .env.local.
+```
+
+Fill in `.env.local` using the [configuration guide](docs/setup.md#environment-variables). It explains Firebase setup, service-account JSON, PayPal credentials and the encryption key. Secrets stay in environment variables.
+
+```bash
 pnpm run dev:render
 ```
 
-The app runs at `http://localhost:3000`. Google/email-link authentication and Secure cookies should be tested on an HTTPS deployment. Local development is useful for rendering and unit tests; use an HTTPS local proxy or the deployed Render URL for a complete authentication/checkout test.
+Open **http://localhost:3000**. You can explore the interface and sample pricing there. For complete sign-in, saved guest sessions and PayPal testing, use an HTTPS deployment: the application uses secure cookies, and PayPal webhooks need a public HTTPS address.
 
-Build and run a production Node server:
+To check a production build locally:
 
 ```bash
 pnpm run build:render
 pnpm exec next start -H 0.0.0.0 -p 3000
 ```
 
-Use the `:render` scripts shown above for local development and deployment.
+## Deploy to Render
 
-## Firebase setup
+The repository includes `render.yaml`; you do not need to enter build and start commands manually.
 
-Use a dedicated Firebase project for this deployment, or carefully merge the supplied rules and indexes into a shared project. Do not overwrite another application’s rules.
+1. Fork this repository, or push the source to your own GitHub repository.
+2. In [Render](https://dashboard.render.com/), select **New → Blueprint**, connect GitHub and choose your repository's **main** branch. Use `render.yaml`.
+3. Review the web service and enter the environment values requested by the Blueprint. Use the same keys as `.env.local`; the Blueprint already supplies `DATA_BACKEND=firebase`.
+4. Approve the deployment. If any secrets are added afterward, save them under the service's **Environment** page and redeploy.
+5. Add your new `onrender.com` hostname under **Firebase Authentication → Settings → Authorized domains**.
+6. Open your Render URL and test sign-in, a saved conversation, publishing and sandbox checkout. `/api/health` checks that the server is running.
 
-1. Register a Firebase **web app**. Put its API key, auth domain, project ID and app ID in the corresponding environment variables below.
-2. In Authentication, enable **Google** and **Email/Password → Email link (passwordless sign-in)**.
-3. Add your Render hostname and any custom domain to Authentication’s **Authorized domains**. Check the email-link redirect domain if you customise it.
-4. Create the Firestore database in **Native mode**. Firebase service availability, billing requirements and quotas apply independently of Render.
-5. Create a server service account with Firestore data access (`roles/datastore.user`). Store the service-account JSON in the **server-only** `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable. Never commit or expose it to the browser.
-6. Deploy the supplied rules and indexes using the Firebase CLI, or configure equivalent rules/indexes in the Firebase console:
+**Future updates:** commit and push to GitHub's `main` branch. Render automatically builds and deploys the new version.
 
-   ```bash
-   firebase deploy --only firestore:rules,firestore:indexes --project YOUR_PROJECT_ID
-   ```
-
-   The supplied rules deny direct browser access. PlanPilot’s server authenticates users, checks ownership or receipt capabilities, then accesses Firestore using its service account. Firebase Authentication itself continues to use the browser SDK.
-
-The default collection prefix is `planpilot_`. If you change `FIRESTORE_COLLECTION_PREFIX`, update the collection names in `firebase/firestore.indexes.json` as well. Firestore may return an index requirement for an additional query shape; create that index before relying on the corresponding feature.
-
-Application records live in separate Firestore collections, including projects, pricing chats, saved connections, checkout sessions, deliveries and demo identities. The server’s repository compatibility layer translates the application’s fixed query subset into document operations; it does not expose a SQL endpoint or store the whole database in one document. Writes use Firestore transactions, with uniqueness records for fields such as receipt and PayPal IDs. Very large saved records are rejected before writing rather than truncated.
-
-## Environment variables
-
-`.env.example` contains **empty placeholders only**. Set actual values in `.env.local` locally and in Render’s **Environment** settings in production. Never add secrets to `render.yaml`, source files, GitHub Actions logs or browser code.
-
-| Variable | Purpose |
-| --- | --- |
-| `DATA_BACKEND` | Set to `firebase` for local development and Render. |
-| `PUBLIC_SITE_URL` | Optional canonical HTTPS origin. On Render, the automatically supplied `RENDER_EXTERNAL_URL` is used if this is absent. Set this for a custom domain. |
-| `FIREBASE_APIKEY` | Firebase web-app API key. Public client configuration, not an administrator credential. |
-| `FIREBASE_AUTHDOMAIN` | Firebase Authentication domain. |
-| `FIREBASE_PROJECT_ID` | Firebase project ID; must match the server service account. |
-| `FIREBASE_APPID` | Firebase web-app ID. |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | **Secret.** Entire service-account JSON, as a server environment variable. |
-| `FIRESTORE_COLLECTION_PREFIX` | Optional; defaults to `planpilot_`. |
-| `STORE_CREDENTIAL_KEY` | **Secret.** Base64-encoded 32-byte AES key used to encrypt saved merchant credentials. Keep it stable across deploys. |
-| `OPENAI_API_KEY` | **Secret.** Server-side key for pricing generation and research. Legacy `OPENAPI_KEY` is also recognised. |
-| `OPENAI_MODEL` | Optional pricing model; defaults to `gpt-4.1-mini`. |
-| `OPENAI_RESEARCH_MODEL` | Optional research model; defaults to `gpt-5-mini`. |
-| `PAYPAL_CLIENT_ID` | PlanPilot’s server-side **sandbox** app Client ID for the shared demo. |
-| `PAYPAL_CLIENT_SECRET` | **Secret.** Secret for the same sandbox app. |
-| `PAYPAL_OWNER_EMAIL` | Verified Firebase email allowed to manage the configured workspace merchant outside demo mode. |
-| `NEXT_TELEMETRY_DISABLED` | Set to `1` to disable Next.js telemetry. |
-
-Generate the encryption key locally, then save the output directly into Render’s secret environment setting:
-
-```bash
-node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
-```
-
-Do not rotate this key without migrating/reconnecting existing encrypted credentials. None of the secret variables should have a `NEXT_PUBLIC_` prefix. The intentionally public Firebase web configuration is served by `/api/auth/config`.
-
-## Connect GitHub to Render
-
-1. Push this repository, including its existing Git history, to your GitHub repository.
-2. In Render, create a **Blueprint** from that GitHub repository and select `main` and `render.yaml`.
-3. Review the planned web service and supply the variables marked `sync: false` through Render’s environment/secret interface.
-4. Approve the first deployment. Render then builds and deploys on later pushes to the linked branch automatically.
-5. Add the resulting Render hostname to Firebase Authentication’s Authorized domains. Set `PUBLIC_SITE_URL` only if a custom canonical origin is needed.
-6. Verify `/api/health`, sign-in, a saved conversation, publishing and a PayPal sandbox checkout.
-
-The Blueprint uses a free Node web service and external Firebase persistence. Render’s free-service spin-down/build limits still apply. Application data is persisted in Firestore.
-
-A manual Render deploy hook or a GitHub Actions deployment secret is not required: Render’s Git integration handles deployment. Render deploys code pushed to the linked GitHub repository and branch.
-
-## PayPal setup and checkout
-
-For a merchant’s own connection:
-
-1. Sign into PlanPilot and open **PayPal integration**.
-2. Choose **Connect a PayPal sandbox app** and give the connection a friendly name.
-3. Copy **Client ID** and **Secret** from **PayPal Developer → Apps & Credentials → Sandbox → your app**. A sandbox account email/password is not an app credential.
-4. PlanPilot verifies the credentials, encrypts them with `STORE_CREDENTIAL_KEY` and registers its own payment webhook.
-
-For a no-login demo, turn on **Sandbox demo**. It uses PlanPilot’s configured sandbox merchant; credentials are never exposed to visitors.
-
-In **Share pricing → Publish pricing**, choose whether to include PayPal checkout. Subscription offers require matching active PayPal billing plans and explicit approval before those test plans are created. One-time offers use Orders v2 and do not create subscription plans. Choosing pricing only does not enable payments merely because PayPal is connected.
-
-No custom webhook or redirect is required for the hosted test flow. PlanPilot supplies return/cancel URLs and verifies payment state server-side. Optional forwarding sends signed events to the merchant’s application; that application remains responsible for fulfilment and account access. Redirect query parameters are never proof of payment.
-
-Published subscription pages can be upgraded to checkout on the same URL when the draft still matches the published offers. Cancellation returns to the hosted pricing page or cards view according to where checkout began, while preserving explicit custom cancellation URLs.
-
-## Migrating an earlier Cloudflare deployment
-
-This section applies only if you are moving an existing Cloudflare deployment to Render. New installations can skip it.
-
-A fresh Firebase deployment starts with empty collections. Deploying this repository does not import or delete records from an earlier deployment.
-
-Before switching a production hostname:
-
-1. Back up D1 records using authorised exports.
-2. Import records into the prefixed Firestore collections with their existing UUIDs; rebuild uniqueness records through the document repository layer.
-3. Keep the same credential-encryption key if encrypted PayPal connection records are migrated.
-4. Reconnect/verify merchant apps on the new host so the appropriate PlanPilot webhook endpoints are registered there. Existing PayPal approval links retain the return URLs set when they were created; test a newly created checkout on the new deployment.
-5. Validate owner isolation, receipts, saved conversations and webhook processing before directing traffic to the new deployment.
-
-This repository does not silently migrate live payment data or reuse a service account from another environment.
+Render uses Firebase Authentication and Firestore. **Firebase Storage is not required.** A new Firebase deployment starts empty; it does not import the hosted demo's existing data. See the [configuration guide](docs/setup.md) for provider setup and migration details.
 
 ## Checks
 
@@ -174,8 +80,8 @@ pnpm exec tsc --noEmit
 pnpm run build:render
 ```
 
-The tests cover guest-session isolation, merchant access, saved connections, reversible archive behaviour, publication upgrades, PayPal plan matching and cancellation destinations. `DOCUMENT_DATABASE_TEST=1` runs the same repository tests through the document-operation layer, using a transactional local test driver. It is not a substitute for a real Firestore/PayPal staging test with your configured environment.
+Tests cover pricing rules, guest and owner isolation, saved connections, publishing, PayPal plan matching and cancellation redirects. A full payment test still requires configured Firebase and PayPal sandbox accounts.
 
-## History and attribution
+## Current scope
 
-The project retains its existing Git history, including development that began on **October 7, 2026**. New commits use the requested author name **Abisola with help from Codex**. Original historical authors, timestamps and commits are preserved; no commits are backdated or fabricated. Publishing files through GitHub’s single-file UI or squashing everything into one initial commit would lose that visible history—use a normal Git push.
+PayPal integration is **sandbox-only**. Live merchant onboarding and automatic fulfilment/access in a customer's application are not implemented. Service prices and delivery costs are estimates for merchant review.

@@ -1,7 +1,0 @@
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    // Files are served by owner-checked or receipt-verified application routes, never directly by the browser.
-    match /{allPaths=**} { allow read, write: if false; }
-  }
-}

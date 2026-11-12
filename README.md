@@ -10,16 +10,17 @@ PlanPilot helps businesses turn an app, professional service, appointment or pro
 
 ## Architecture
 
-PlanPilot runs as a Next.js Node application on Render, with Firebase handling authentication, application data and file storage.
+PlanPilot runs as a Next.js Node application on Render, with Firebase handling authentication and application data.
 
 | Component | Service |
 | --- | --- |
 | Application hosting | Render |
 | Sign-in | Firebase Authentication |
 | Application records | Cloud Firestore |
-| Uploaded files | Firebase Storage |
 | AI pricing assistant | OpenAI |
 | Test payments | PayPal Sandbox |
+
+PlanPilot’s pricing workspace does not upload or deliver files, so Firebase Storage and bucket credentials are not required.
 
 Set `DATA_BACKEND=firebase` as provided in `render.yaml`. Follow the Firebase and Render setup steps below to deploy your own instance.
 
@@ -41,7 +42,7 @@ Set `DATA_BACKEND=firebase` as provided in `render.yaml`. Follow the Firebase an
 ## Requirements
 
 - Node.js 24 and Corepack/pnpm (the package manager version is pinned in `package.json`).
-- A Firebase project with Authentication, a Firestore database in Native mode and a Storage bucket.
+- A Firebase project with Authentication and a Firestore database in Native mode.
 - A server service account for that Firebase project.
 - An OpenAI API key to generate pricing; without it, examples and editing remain available.
 - PayPal sandbox app credentials to test checkout.
@@ -74,15 +75,15 @@ Use a dedicated Firebase project for this deployment, or carefully merge the sup
 1. Register a Firebase **web app**. Put its API key, auth domain, project ID and app ID in the corresponding environment variables below.
 2. In Authentication, enable **Google** and **Email/Password → Email link (passwordless sign-in)**.
 3. Add your Render hostname and any custom domain to Authentication’s **Authorized domains**. Check the email-link redirect domain if you customise it.
-4. Create the Firestore database in **Native mode** and create/select the Firebase Storage bucket. Firebase service availability, billing requirements and quotas apply independently of Render.
-5. Create a server service account with Firestore data access (`roles/datastore.user`) and object access to the selected Storage bucket (`roles/storage.objectAdmin`, preferably scoped to that bucket). Store the service-account JSON in the **server-only** `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable. Never commit or expose it to the browser.
+4. Create the Firestore database in **Native mode**. Firebase service availability, billing requirements and quotas apply independently of Render.
+5. Create a server service account with Firestore data access (`roles/datastore.user`). Store the service-account JSON in the **server-only** `FIREBASE_SERVICE_ACCOUNT_JSON` environment variable. Never commit or expose it to the browser.
 6. Deploy the supplied rules and indexes using the Firebase CLI, or configure equivalent rules/indexes in the Firebase console:
 
    ```bash
-   firebase deploy --only firestore:rules,firestore:indexes,storage --project YOUR_PROJECT_ID
+   firebase deploy --only firestore:rules,firestore:indexes --project YOUR_PROJECT_ID
    ```
 
-   The supplied rules deny direct browser access. PlanPilot’s server authenticates users, checks ownership or receipt capabilities, then accesses Firestore/Storage using its service account. Firebase Authentication itself continues to use the browser SDK.
+   The supplied rules deny direct browser access. PlanPilot’s server authenticates users, checks ownership or receipt capabilities, then accesses Firestore using its service account. Firebase Authentication itself continues to use the browser SDK.
 
 The default collection prefix is `planpilot_`. If you change `FIRESTORE_COLLECTION_PREFIX`, update the collection names in `firebase/firestore.indexes.json` as well. Firestore may return an index requirement for an additional query shape; create that index before relying on the corresponding feature.
 
@@ -101,7 +102,6 @@ Application records live in separate Firestore collections, including projects, 
 | `FIREBASE_PROJECT_ID` | Firebase project ID; must match the server service account. |
 | `FIREBASE_APPID` | Firebase web-app ID. |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | **Secret.** Entire service-account JSON, as a server environment variable. |
-| `FIREBASE_STORAGE_BUCKET` | Bucket name, without `gs://`. |
 | `FIRESTORE_COLLECTION_PREFIX` | Optional; defaults to `planpilot_`. |
 | `STORE_CREDENTIAL_KEY` | **Secret.** Base64-encoded 32-byte AES key used to encrypt saved merchant credentials. Keep it stable across deploys. |
 | `OPENAI_API_KEY` | **Secret.** Server-side key for pricing generation and research. Legacy `OPENAPI_KEY` is also recognised. |
@@ -129,7 +129,7 @@ Do not rotate this key without migrating/reconnecting existing encrypted credent
 5. Add the resulting Render hostname to Firebase Authentication’s Authorized domains. Set `PUBLIC_SITE_URL` only if a custom canonical origin is needed.
 6. Verify `/api/health`, sign-in, a saved conversation, publishing and a PayPal sandbox checkout.
 
-The Blueprint uses a free Node web service and external Firebase persistence. Render’s free-service spin-down/build limits still apply. No database or user upload depends on Render’s ephemeral local filesystem.
+The Blueprint uses a free Node web service and external Firebase persistence. Render’s free-service spin-down/build limits still apply. Application data is persisted in Firestore.
 
 A manual Render deploy hook or a GitHub Actions deployment secret is not required: Render’s Git integration handles deployment. Render deploys code pushed to the linked GitHub repository and branch.
 
@@ -158,12 +158,11 @@ A fresh Firebase deployment starts with empty collections. Deploying this reposi
 
 Before switching a production hostname:
 
-1. Back up D1 records and R2 objects using authorised exports.
-2. Import records into the prefixed Firestore collections with their existing UUIDs; rebuild uniqueness records through the document repository layer. Copy file objects to the Firebase Storage bucket using their existing keys.
+1. Back up D1 records using authorised exports.
+2. Import records into the prefixed Firestore collections with their existing UUIDs; rebuild uniqueness records through the document repository layer.
 3. Keep the same credential-encryption key if encrypted PayPal connection records are migrated.
-4. Update any absolute public file URLs to the new canonical origin where needed.
-5. Reconnect/verify merchant apps on the new host so the appropriate PlanPilot webhook endpoints are registered there. Existing PayPal approval links retain the return URLs set when they were created; test a newly created checkout on the new deployment.
-6. Validate owner isolation, receipts, saved conversations and webhook processing before directing traffic to the new deployment.
+4. Reconnect/verify merchant apps on the new host so the appropriate PlanPilot webhook endpoints are registered there. Existing PayPal approval links retain the return URLs set when they were created; test a newly created checkout on the new deployment.
+5. Validate owner isolation, receipts, saved conversations and webhook processing before directing traffic to the new deployment.
 
 This repository does not silently migrate live payment data or reuse a service account from another environment.
 

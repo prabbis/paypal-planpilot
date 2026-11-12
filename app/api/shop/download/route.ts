@@ -1,4 +1,3 @@
-import {db} from "@/lib/checkout-store";
-import {bucket,storeError,StoreError,captureStoreOrder,type StoreOrder,type CartLine} from "@/lib/stores";
-export const dynamic="force-dynamic";
-export async function GET(request:Request){try{const url=new URL(request.url),receipt=url.searchParams.get("receipt")??"";if(!/^[a-f0-9]{64}$/.test(receipt))throw new StoreError("Download not found.",404);const order=await db().prepare("SELECT * FROM store_orders WHERE receipt=? AND status='PAID'").bind(receipt).first<StoreOrder>();if(!order)throw new StoreError("Download not found.",404);await captureStoreOrder(order);const product=(JSON.parse(order.cart) as CartLine[]).find(p=>p.id===url.searchParams.get("product")&&p.type==="digital");if(!product?.fileKey||!product.fileKey.startsWith("stores/"+order.store+"/downloads/"))throw new StoreError("Download not found.",404);const file=await bucket().get(product.fileKey);if(!file)throw new StoreError("This file is unavailable. Contact the store.",404);return new Response(file.body,{headers:{"Content-Type":"application/octet-stream","Content-Disposition":"attachment; filename=\"download\"; filename*=UTF-8''"+encodeURIComponent(product.fileName||"download"),"Cache-Control":"private, no-store","Referrer-Policy":"no-referrer"}});}catch(e){return storeError(e);}}
+export async function GET(){
+ return Response.json({error:"File uploads and downloads are not available in PlanPilot’s pricing workspace."},{status:410});
+}

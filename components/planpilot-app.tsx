@@ -33,7 +33,7 @@ export default function Home({signedIn,isDemo=false,isMerchant,signInHref,signOu
  const[isSample,setIsSample]=useState(false);
  const[workload,setWorkload]=useState<Workload>(defaultWorkload),[assessment,setAssessment]=useState<Assessment|null>(null);
  const[billingStore,setBillingStore]=useState(""),[billingStores,setBillingStores]=useState<{id:string;name:string}[]>([]);
- useEffect(()=>{if(!signedIn||isDemo)return;fetch("/api/stores").then(async r=>{if(!r.ok)return;const d=await r.json() as {stores:{id:string;draft:string;connected:boolean}[]};setBillingStores(d.stores.filter(s=>s.connected).map(s=>({id:s.id,name:JSON.parse(s.draft).name==="My store"?"Unnamed PayPal connection":JSON.parse(s.draft).name})));}).catch(()=>{});},[signedIn]);
+ useEffect(()=>{if(!signedIn||isDemo)return;fetch("/api/payment-connections").then(async r=>{if(!r.ok)return;const d=await r.json() as {connections:{id:string;name:string}[]};setBillingStores(d.connections);}).catch(()=>{});},[signedIn,isDemo]);
  const[model,setModel]=useState(initial),[plans,setPlans]=useState<Plan[]>([]),[description,setDescription]=useState(""),[input,setInput]=useState("");
  const[website,setWebsite]=useState(""),[websiteError,setWebsiteError]=useState("");
  const[websiteMode,setWebsiteMode]=useState<"suggest"|"review">("suggest");
